@@ -4,10 +4,12 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import SearchBox from "@/components/SearchBox";
 import DrugHeader from "@/components/drug/DrugHeader";
+import HistoryChart from "@/components/drug/HistoryChart";
 import HowToRead from "@/components/drug/HowToRead";
 import MarginHero from "@/components/drug/MarginHero";
 import MfpBadge from "@/components/drug/MfpBadge";
 import PriceStack from "@/components/drug/PriceStack";
+import StateComparison from "@/components/drug/StateComparison";
 import WatchButton from "@/components/live/WatchButton";
 import { isWatched } from "@/lib/mutations";
 import {
@@ -17,6 +19,8 @@ import {
   getMarginSummary,
   getMfp,
   getPartD,
+  getPriceHistory,
+  getStateComparison,
   normalizeNdc,
 } from "@/lib/queries";
 
@@ -40,13 +44,15 @@ export default async function DrugPage({ params }: Props) {
   const drug = await cachedDrug(ndc11);
   if (!drug) notFound();
 
-  const [acquisition, margin, partd, fss, mfp, watched] = await Promise.all([
+  const [acquisition, margin, partd, fss, mfp, watched, history, states] = await Promise.all([
     getAcquisition(ndc11),
     getMarginSummary(ndc11),
     getPartD(ndc11),
     getFss(ndc11),
     getMfp(ndc11),
     isWatched(ndc11).catch(() => false),
+    getPriceHistory(ndc11),
+    getStateComparison(ndc11),
   ]);
 
   return (
@@ -77,6 +83,8 @@ export default async function DrugPage({ params }: Props) {
         partd={partd}
         fss={fss}
       />
+      <HistoryChart history={history} mfpDate={mfp?.effective_date ?? null} />
+      <StateComparison comparison={states} />
       <div className="mt-8">
         <HowToRead />
       </div>

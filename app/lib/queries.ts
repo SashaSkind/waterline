@@ -62,6 +62,45 @@ export interface MfpBadge {
   effective_date: string;
 }
 
+export interface AcquisitionHistoryPoint {
+  date: string;
+  acq_per_unit: number;
+}
+
+export interface ReimbursementHistoryPoint {
+  date: string;
+  year: number;
+  quarter: number;
+  reimb_per_unit: number;
+}
+
+export interface PriceHistory {
+  acquisition: AcquisitionHistoryPoint[];
+  reimbursement: ReimbursementHistoryPoint[];
+  first_generic_approval: string | null;
+}
+
+export interface StateComparisonRow {
+  state: string;
+  acq_per_unit: number;
+  reimb_per_unit: number;
+  margin_per_unit: number;
+  rx_count: number;
+}
+
+export interface SuppressedState {
+  state: string;
+  visible_cells: number;
+  suppressed_cells: number;
+}
+
+export interface StateComparison {
+  year: number;
+  quarter: number;
+  states: StateComparisonRow[];
+  suppressed_states: SuppressedState[];
+}
+
 export interface TopTenRow {
   ndc11: string;
   brand_name: string;
@@ -244,6 +283,125 @@ export async function getMfp(ndc11: string): Promise<MfpBadge | null> {
     { ndc11 },
   );
   return rows[0] ?? null;
+}
+
+// ---------- F6: history chart ----------
+
+/** Three years of acquisition history, quarterly national reimbursement,
+ * and the first generic approval marker. The chart is assembled in the
+ * client because Recharts needs a browser-sized rendering boundary. */
+export async function getPriceHistory(ndc11: string): Promise<PriceHistory> {
+  const [acquisition, reimbursement, genericApproval] = await Promise.all([
+    chRows<AcquisitionHistoryPoint>(
+      `WITH (
+         SELECT max(effective_date) - INTERVAL 3 YEAR
+         FROM nadac_weekly FINAL
+         WHERE ndc11 = {ndc11: String}
+       ) AS since
+       SELECT toString(effective_date) AS date,
+              toFloat64(nadac_per_unit) AS acq_per_unit
+       FROM nadac_weekly FINAL
+       WHERE ndc11 = {ndc11: String} AND effective_date >= since
+       ORDER BY effective_date`,
+      { ndc11 },
+    ),
+    chRows<ReimbursementHistoryPoint>(
+      `SELECT toString(toDate(concat(
+                toString(year), '-',
+                lpad(toString(quarter * 3 - 1), 2, '0'), '-15'
+              ))) AS date,
+              year, quarter,
+              toFloat64(sum(total_reimb) / sum(units)) AS reimb_per_unit
+       FROM margin_mv
+       WHERE ndc11 = {ndc11: String}
+       GROUP BY year, quarter
+       ORDER BY year, quarter`,
+      { ndc11 },
+    ),
+    chRows<{ first_generic_approval: string }>(
+      `SELECT toString(o.first_generic_approval) AS first_generic_approval
+       FROM dim_drug_v d
+       INNER JOIN (
+         SELECT application_number, first_generic_approval
+         FROM orange_book FINAL
+       ) o
+         ON o.application_number = d.application_number
+       WHERE d.ndc11 = {ndc11: String}
+       ORDER BY o.first_generic_approval
+       LIMIT 1`,
+      { ndc11 },
+    ),
+  ]);
+
+  return {
+    acquisition,
+    reimbursement,
+    first_generic_approval:
+      genericApproval[0]?.first_generic_approval ?? null,
+  };
+}
+
+// ---------- F7: state comparison ----------
+
+/** State reimbursement for the latest available quarter. Suppressed SDUD
+ * cells are reported separately because they are intentionally absent from
+ * margin_mv and must never be rendered as zero. */
+export async function getStateComparison(
+  ndc11: string,
+): Promise<StateComparison | null> {
+  const rows = await chRows<StateComparisonRow & { year: number; quarter: number }>(
+    `WITH latest AS (
+       SELECT year, quarter
+       FROM margin_mv
+       WHERE ndc11 = {ndc11: String}
+       ORDER BY year DESC, quarter DESC
+       LIMIT 1
+     )
+     SELECT m.state AS state,
+            toUInt16(m.year) AS year,
+            toUInt8(m.quarter) AS quarter,
+            toFloat64(m.acq_per_unit) AS acq_per_unit,
+            toFloat64(m.reimb_per_unit) AS reimb_per_unit,
+            toFloat64(m.margin_per_unit) AS margin_per_unit,
+            toUInt32(m.rx_count) AS rx_count
+     FROM margin_mv m
+     INNER JOIN latest l ON m.year = l.year AND m.quarter = l.quarter
+     WHERE m.ndc11 = {ndc11: String}
+     ORDER BY reimb_per_unit ASC, state ASC`,
+    { ndc11 },
+  );
+  if (!rows[0]) return null;
+
+  const year = rows[0].year;
+  const quarter = rows[0].quarter;
+  const suppressedStates = await chRows<SuppressedState>(
+    `SELECT state,
+            toUInt32(countIf(suppression_used = 0 AND units_reimbursed > 0))
+              AS visible_cells,
+            toUInt32(countIf(suppression_used = 1)) AS suppressed_cells
+     FROM sdud_quarterly FINAL
+     WHERE ndc11 = {ndc11: String}
+       AND year = {year: UInt16}
+       AND quarter = {quarter: UInt8}
+       AND state != 'XX'
+     GROUP BY state
+     HAVING suppressed_cells > 0
+     ORDER BY state`,
+    { ndc11, year, quarter },
+  );
+
+  return {
+    year,
+    quarter,
+    states: rows.map(({ state, acq_per_unit, reimb_per_unit, margin_per_unit, rx_count }) => ({
+      state,
+      acq_per_unit,
+      reimb_per_unit,
+      margin_per_unit,
+      rx_count,
+    })),
+    suppressed_states: suppressedStates,
+  };
 }
 
 // ---------- F4: watchlist + alerts (all read from CDC-replicated tables) ----------

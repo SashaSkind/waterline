@@ -11,6 +11,13 @@ export function ch(): ClickHouseClient {
       username: process.env.CLICKHOUSE_USER ?? "default",
       password: process.env.CLICKHOUSE_PASSWORD,
       application: "waterline",
+      // Drug pages fan several independent reads into a Mini service. Keep
+      // the pool deliberately small so those reads queue instead of opening
+      // a burst of TLS connections that the service/load balancer may reset.
+      max_open_connections: 3,
+      keep_alive: {
+        eagerly_destroy_stale_sockets: true,
+      },
       clickhouse_settings: {
         // 64-bit ints as JSON strings would complicate the UI; every query
         // casts aggregates to Float64/UInt32 instead, so this stays default.
