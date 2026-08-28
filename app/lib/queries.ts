@@ -508,6 +508,67 @@ export async function getAlerts(limit = 50): Promise<AlertRow[]> {
   );
 }
 
+// ---------- cohort stats panel ----------
+
+export interface CohortStats {
+  year: number;
+  quarter: number;
+  all_ndcs: number;
+  all_pct: number;
+  top50_pct: number;
+  highvol_ndcs: number;
+  highvol_pct: number;
+  brand_ndcs: number;
+  brand_pct: number;
+  generic_ndcs: number;
+  generic_pct: number;
+  brand_spend_underwater_pct: number;
+  dollars_below_acq: number;
+}
+
+/** Share of NDCs underwater in the latest quarter, per cohort, plus the
+ * quarter's total dollars reimbursed below acquisition cost. */
+export async function getCohortStats(): Promise<CohortStats | null> {
+  const rows = await chRows<CohortStats>(
+    `WITH latest AS (
+       SELECT year AS y, quarter AS q FROM margin_mv ORDER BY year DESC, quarter DESC LIMIT 1
+     ),
+     nat AS (
+       SELECT m.ndc11 AS ndc11,
+              any(toFloat64(m.acq_per_unit)) AS acq,
+              toFloat64(sum(m.total_reimb)) / toFloat64(sum(m.units)) AS reimb,
+              toFloat64(sum(m.rx_count)) AS rx,
+              toFloat64(sum(m.total_reimb)) AS spend,
+              any(d.is_generic) AS is_gen
+       FROM margin_mv m
+       INNER JOIN latest l ON m.year = l.y AND m.quarter = l.q
+       INNER JOIN dim_drug_v d ON d.ndc11 = m.ndc11
+       GROUP BY m.ndc11
+     ),
+     ranked AS (
+       SELECT *, row_number() OVER (ORDER BY spend DESC) AS spend_rank FROM nat
+     )
+     SELECT (SELECT y FROM latest) AS year,
+            (SELECT q FROM latest) AS quarter,
+            toUInt32(count()) AS all_ndcs,
+            countIf(reimb < acq) / count() * 100 AS all_pct,
+            countIf(spend_rank <= 50 AND reimb < acq) / 50 * 100 AS top50_pct,
+            toUInt32(countIf(rx >= 10000)) AS highvol_ndcs,
+            countIf(rx >= 10000 AND reimb < acq) / greatest(countIf(rx >= 10000), 1) * 100 AS highvol_pct,
+            toUInt32(countIf(NOT is_gen)) AS brand_ndcs,
+            countIf(NOT is_gen AND reimb < acq) / greatest(countIf(NOT is_gen), 1) * 100 AS brand_pct,
+            toUInt32(countIf(is_gen)) AS generic_ndcs,
+            countIf(is_gen AND reimb < acq) / greatest(countIf(is_gen), 1) * 100 AS generic_pct,
+            sumIf(spend, NOT is_gen AND reimb < acq) / greatest(sumIf(spend, NOT is_gen), 1) * 100 AS brand_spend_underwater_pct,
+            (SELECT toFloat64(abs(sumIf(m2.margin_per_unit * m2.units, m2.margin_per_unit < 0)))
+             FROM margin_mv m2 INNER JOIN latest l2 ON m2.year = l2.y AND m2.quarter = l2.q
+            ) AS dollars_below_acq
+     FROM ranked`,
+    {},
+  );
+  return rows[0] ?? null;
+}
+
 // ---------- F3: top ten worst margins ----------
 
 export async function getTopTen(

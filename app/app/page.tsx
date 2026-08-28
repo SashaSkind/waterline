@@ -1,18 +1,22 @@
 import Link from "next/link";
 
 import SearchBox from "@/components/SearchBox";
+import CohortPanel from "@/components/home/CohortPanel";
 import FilterTabs, { type TopTenFilter } from "@/components/home/FilterTabs";
 import TopTenTable from "@/components/home/TopTenTable";
 import AlertFeed from "@/components/live/AlertFeed";
 import WatchlistPanel from "@/components/live/WatchlistPanel";
-import { getTopTen } from "@/lib/queries";
+import { getCohortStats, getTopTen } from "@/lib/queries";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
   const sp = await searchParams;
   const raw = Array.isArray(sp.filter) ? sp.filter[0] : sp.filter;
   const filter: TopTenFilter =
     raw === "brand" || raw === "generic" ? raw : "all";
-  const rows = await getTopTen(filter);
+  const [rows, stats] = await Promise.all([
+    getTopTen(filter),
+    getCohortStats().catch(() => null),
+  ]);
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-10 sm:py-14">
@@ -34,6 +38,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           </Link>
         </div>
       </section>
+
+      <CohortPanel stats={stats} />
 
       <section className="mt-12 sm:mt-14">
         <div className="flex flex-wrap items-end justify-between gap-4">
