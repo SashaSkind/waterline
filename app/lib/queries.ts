@@ -244,6 +244,103 @@ export async function getMfp(ndc11: string): Promise<MfpBadge | null> {
   return rows[0] ?? null;
 }
 
+// ---------- F4: watchlist + alerts (all read from CDC-replicated tables) ----------
+
+export interface WatchRow {
+  watch_id: number;
+  ndc11: string;
+  threshold_pct: number;
+  brand_name: string;
+  ingredient: string;
+  acq_per_unit: number | null;
+  acq_date: string | null;
+  reimb_per_unit: number | null;
+  margin_per_unit: number | null;
+}
+
+export interface AlertRow {
+  event_id: number;
+  ndc11: string;
+  brand_name: string;
+  ingredient: string;
+  effective_date: string;
+  new_price: number;
+  prev_price: number;
+  pct_change: number;
+  threshold_pct: number;
+  flipped_negative: number;
+  ingested_at: string;
+}
+
+export async function getWatchlist(): Promise<WatchRow[]> {
+  return chRows<WatchRow>(
+    `WITH watched AS (SELECT ndc11 FROM watchlist_v),
+     acq AS (
+       SELECT ndc11, argMax(price, effective_date) AS acq_per_unit,
+              toString(max(effective_date)) AS acq_date
+       FROM (
+         SELECT ndc11, toFloat64(nadac_per_unit) AS price, effective_date
+         FROM nadac_weekly FINAL WHERE ndc11 IN watched
+         UNION ALL
+         SELECT ndc11, toFloat64(nadac_per_unit), effective_date
+         FROM price_events_v WHERE ndc11 IN watched
+       ) GROUP BY ndc11
+     ),
+     reimb AS (
+       SELECT ndc11, argMax(r, yq) AS reimb_per_unit
+       FROM (
+         SELECT ndc11, year * 10 + quarter AS yq,
+                toFloat64(sum(total_reimb) / sum(units)) AS r
+         FROM margin_mv WHERE ndc11 IN watched GROUP BY ndc11, year, quarter
+       ) GROUP BY ndc11
+     )
+     SELECT toUInt32(w.watch_id) AS watch_id, w.ndc11 AS ndc11,
+            toFloat64(w.threshold_pct) AS threshold_pct,
+            d.brand_name, d.ingredient,
+            a.acq_per_unit AS acq_per_unit, a.acq_date AS acq_date,
+            r.reimb_per_unit AS reimb_per_unit,
+            r.reimb_per_unit - a.acq_per_unit AS margin_per_unit
+     FROM watchlist_v w
+     INNER JOIN dim_drug_v d ON d.ndc11 = w.ndc11
+     LEFT JOIN acq a ON a.ndc11 = w.ndc11
+     LEFT JOIN reimb r ON r.ndc11 = w.ndc11
+     ORDER BY w.added_at DESC`,
+    {},
+  );
+}
+
+export async function getAlerts(limit = 50): Promise<AlertRow[]> {
+  return chRows<AlertRow>(
+    `WITH reimb AS (
+       SELECT ndc11, argMax(r, yq) AS reimb_per_unit
+       FROM (
+         SELECT ndc11, year * 10 + quarter AS yq,
+                toFloat64(sum(total_reimb) / sum(units)) AS r
+         FROM margin_mv WHERE ndc11 IN (SELECT ndc11 FROM watchlist_v)
+         GROUP BY ndc11, year, quarter
+       ) GROUP BY ndc11
+     )
+     SELECT toUInt32(e.event_id) AS event_id, e.ndc11 AS ndc11,
+            d.brand_name, d.ingredient,
+            toString(e.effective_date) AS effective_date,
+            toFloat64(e.nadac_per_unit) AS new_price,
+            toFloat64(e.prev_per_unit) AS prev_price,
+            toFloat64(e.pct_change) AS pct_change,
+            toFloat64(w.threshold_pct) AS threshold_pct,
+            if(r.reimb_per_unit - toFloat64(e.nadac_per_unit) < 0
+               AND r.reimb_per_unit - toFloat64(e.prev_per_unit) >= 0, 1, 0) AS flipped_negative,
+            toString(e.ingested_at) AS ingested_at
+     FROM price_events_v e
+     INNER JOIN watchlist_v w ON w.ndc11 = e.ndc11
+        AND abs(toFloat64(e.pct_change)) >= toFloat64(w.threshold_pct)
+     INNER JOIN dim_drug_v d ON d.ndc11 = e.ndc11
+     LEFT JOIN reimb r ON r.ndc11 = e.ndc11
+     ORDER BY e.ingested_at DESC
+     LIMIT {limit: UInt32}`,
+    { limit },
+  );
+}
+
 // ---------- F3: top ten worst margins ----------
 
 export async function getTopTen(
