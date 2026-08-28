@@ -67,6 +67,8 @@ export interface TopTenRow {
   brand_name: string;
   ingredient: string;
   is_generic: boolean;
+  year: number;
+  quarter: number;
   pricing_unit: string;
   acq_per_unit: number;
   reimb_per_unit: number;
@@ -355,6 +357,7 @@ export async function getTopTen(
        SELECT year, quarter FROM margin_mv ORDER BY year DESC, quarter DESC LIMIT 1
      )
      SELECT m.ndc11 AS ndc11, d.brand_name, d.ingredient, d.is_generic,
+            toUInt16(any(m.year)) AS year, toUInt8(any(m.quarter)) AS quarter,
             any(m.pricing_unit) AS pricing_unit,
             toFloat64(any(m.acq_per_unit)) AS acq_per_unit,
             toFloat64(sum(m.total_reimb) / sum(m.units)) AS reimb_per_unit,
