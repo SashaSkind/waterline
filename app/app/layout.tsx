@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
 import "./globals.css";
 
@@ -29,8 +30,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <div className="mx-auto flex w-full max-w-7xl items-baseline gap-3 px-6 py-4">
             <Link
               href="/"
-              className="text-lg font-semibold tracking-tight text-neutral-50"
+              className="flex items-center gap-2.5 self-center text-lg font-semibold tracking-tight text-neutral-50"
             >
+              <Image
+                src="/logo.png"
+                alt=""
+                width={28}
+                height={28}
+                priority
+                className="rounded-md"
+              />
               Waterline
             </Link>
             <span className="hidden text-sm text-neutral-500 sm:inline">
