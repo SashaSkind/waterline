@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import SearchBox from "@/components/SearchBox";
 import FilterTabs, { type TopTenFilter } from "@/components/home/FilterTabs";
 import TopTenTable from "@/components/home/TopTenTable";
@@ -22,8 +24,14 @@ export default async function Home({ searchParams }: PageProps<"/">) {
           The waterline is where margin crosses zero &mdash; reimbursement no
           longer covers what the pharmacy paid the wholesaler.
         </p>
-        <div className="mt-8">
+        <div className="mt-8 flex flex-wrap items-center gap-3">
           <SearchBox />
+          <Link
+            href="/explore"
+            className="rounded-lg border border-sky-800 bg-sky-950/40 px-4 py-3 text-sm font-medium text-sky-300 transition-colors hover:border-sky-600"
+          >
+            Explore every drug →
+          </Link>
         </div>
       </section>
 

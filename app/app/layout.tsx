@@ -26,7 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col bg-neutral-950 font-sans">
         <header className="border-b border-neutral-800/80">
-          <div className="mx-auto flex w-full max-w-5xl items-baseline gap-3 px-6 py-4">
+          <div className="mx-auto flex w-full max-w-7xl items-baseline gap-3 px-6 py-4">
             <Link
               href="/"
               className="text-lg font-semibold tracking-tight text-neutral-50"
@@ -36,6 +36,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <span className="hidden text-sm text-neutral-500 sm:inline">
               where drug margins cross zero
             </span>
+            <Link
+              href="/explore"
+              className="ml-auto text-sm text-neutral-400 transition-colors hover:text-neutral-100"
+            >
+              Margin map
+            </Link>
           </div>
         </header>
         {children}

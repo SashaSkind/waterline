@@ -69,6 +69,9 @@ def ch_client():
         username=os.environ.get("CLICKHOUSE_USER", "default"),
         password=os.environ["CLICKHOUSE_PASSWORD"],
         secure=True,
+        # Full-history rebuilds execute inside ClickHouse and can legitimately
+        # outlive the driver's five-minute default response timeout.
+        send_receive_timeout=900,
     )
 
 

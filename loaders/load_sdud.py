@@ -30,7 +30,10 @@ INSERT_COLS = [
     "total_amount_reimbursed", "medicaid_amount_reimbursed",
     "suppression_used",
 ]
-BATCH_ROWS = 100_000
+# ClickHouse Cloud Mini can time out while sending this table's wide 100k-row
+# Native blocks over HTTPS. 25k stays within the recommended 10k-100k range
+# while keeping each request comfortably below the transport timeout.
+BATCH_ROWS = 25_000
 # Rows per batch whose SQL-normalized NDC is re-checked against normalize_ndc11().
 NDC_ASSERT_SAMPLE = 1_000
 
@@ -67,7 +70,10 @@ def _select_sql(files: list[Path], filtered: bool) -> str:
                                                                       AS suppression_used,
                 CASE WHEN "Units Reimbursed" IS NULL OR trim("Units Reimbursed") = ''
                      THEN 1 ELSE 0 END                                AS units_blank
-            FROM read_csv([{paths}], header=true, all_varchar=true)
+            FROM read_csv(
+                [{paths}], header=true, all_varchar=true,
+                strict_mode=false, null_padding=true
+            )
             WHERE length({NDC_DIGITS_SQL}) BETWEEN 1 AND 11
               AND TRY_CAST("Year" AS INTEGER) IS NOT NULL
               AND TRY_CAST("Quarter" AS INTEGER) IS NOT NULL
