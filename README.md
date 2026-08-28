@@ -19,6 +19,8 @@ to stock. A negative margin is **underwater**; zero margin is the **waterline**.
 - Compares Medicaid reimbursement across states.
 - Writes watchlist changes to Postgres and surfaces price alerts after
   ClickPipes replicates the events into ClickHouse.
+- Records PII-free signup, drug-view, and watchlist activity in Postgres and
+  aggregates it live on a product-analytics page in ClickHouse.
 - Replays historical NADAC changes to demonstrate the live CDC path.
 - Renders an interactive, log-scale margin map with server-side ClickHouse
   binning, pan/zoom reaggregation, quarter playback, and state filtering.
@@ -28,6 +30,7 @@ to stock. A negative margin is **underwater**; zero margin is the **waterline**.
 ```mermaid
 flowchart LR
     UI[Next.js app] -->|operational writes| PG[Postgres]
+    UI -->|PII-free usage events| PG
     PG -->|ClickPipes CDC| CH[ClickHouse]
     FED[Federal data files] --> PY[Python loaders]
     PY -->|bulk history| CH
@@ -36,9 +39,17 @@ flowchart LR
 ```
 
 Postgres owns operational data: users, notes, the drug dimension, watchlists,
-and price events. ClickPipes replicates `dim_drug`, `watchlist`, and
-`price_events` into ClickHouse. Immutable federal history loads directly into
-ClickHouse so millions of rows do not pass through the Postgres WAL.
+price events, and the append-only product event log. ClickPipes replicates
+`dim_drug`, `watchlist`, `price_events`, and `product_events` into
+ClickHouse. The product log stores user IDs and typed actions but never emails,
+note bodies, search text, IP addresses, or user agents. Immutable federal
+history loads directly into ClickHouse so millions of rows do not pass through
+the Postgres WAL.
+
+New user inserts create their signup event through a Postgres trigger.
+Watchlist mutations create their product event inside the same application
+transaction. Drug pages emit a best-effort view event after they mount in the
+browser.
 
 The main analytical paths are:
 
@@ -46,6 +57,8 @@ The main analytical paths are:
 - `margin_map`, sorted period/state-first for interactive viewport queries.
 - `margin_map_meta`, a small table of available periods, states, counts, and
   robust initial viewport bounds.
+- `product_analytics.events`, a PII-free projection over the append-only
+  Postgres activity log.
 
 Every CDC-owned ClickHouse table is read through its deduplicated `*_v` view.
 The application never writes directly to those replicated tables.
@@ -81,6 +94,7 @@ prices are context benchmarks and are not used in the margin calculation.
 
 ```text
 app/                 Next.js application and API routes
+clickhouse/databases/ Logical ClickHouse database DDL
 clickhouse/tables/   ClickHouse fact-table DDL
 clickhouse/views/    Current-row views over ClickPipes CDC tables
 loaders/             Local Python ingestion, rebuild, validation, and replay tools
@@ -132,7 +146,8 @@ pnpm dev
 ```
 
 Open <http://localhost:3000>. The main explorer is available at
-<http://localhost:3000/explore>.
+<http://localhost:3000/explore>, and usage analytics at
+<http://localhost:3000/analytics>.
 
 Useful verification commands:
 
@@ -154,8 +169,22 @@ uv run python apply_pg_schema.py
 ```
 
 Apply the SQL files in `clickhouse/tables/` to ClickHouse. Configure the
-ClickPipe to replicate only `dim_drug`, `watchlist`, and `price_events`, then
-apply `clickhouse/views/cdc_current.sql` after the replicated tables exist.
+ClickPipe to replicate `dim_drug`, `watchlist`, `price_events`, and
+`product_events`. For `product_events`, use a `MergeTree` with the custom
+sorting key `(event_name, event_date, ndc11, user_id, event_id)`.
+
+After the replicated tables exist, apply these in order:
+
+```bash
+clickhousectl cloud service query --name waterline \
+  --queries-file clickhouse/databases/product_analytics.sql
+
+# cdc_current.sql contains three view statements; apply it in the SQL console
+# or run each statement separately through the query endpoint.
+
+clickhousectl cloud service query --name waterline \
+  --queries-file clickhouse/views/product_analytics.sql
+```
 
 The sentinel check verifies the full Postgres-to-ClickHouse round trip:
 

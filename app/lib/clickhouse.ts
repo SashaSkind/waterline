@@ -4,8 +4,9 @@ import {
   type ClickHouseSettings,
 } from "@clickhouse/client";
 
-// Analytical reads. All CDC-owned tables are read through their *_v dedupe
-// views (dim_drug_v, watchlist_v, price_events_v) — never the raw copies.
+// Analytical reads. All CDC-owned tables are read through dedupe views:
+// dim_drug_v, watchlist_v, price_events_v, or product_analytics.events.
+// Never query the raw ClickPipe copies from application features.
 let client: ClickHouseClient | undefined;
 
 const TRANSIENT_NETWORK_CODES = new Set([

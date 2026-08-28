@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 
-// Operational writes (watchlist, price_events replay reads its own path).
+// Operational writes (watchlist and append-only product events; the price
+// events replay uses the Python loader's own connection).
 // The managed Postgres uses a private CA; provide it via PG_CA_CERT in prod,
 // otherwise fall back to encrypted-but-unverified (hackathon tradeoff).
 let pool: Pool | undefined;

@@ -50,7 +50,9 @@ Maximum fair price — Medicare's negotiated price (published per 30-day supply)
 `users`, `notes`. Contains PII, no analytical value, never replicated.
 
 **CDC-owned table**:
-`dim_drug`, `watchlist`, `price_events`. Written only in Postgres; ClickPipes owns the ClickHouse copies and will overwrite any direct write to them.
+`dim_drug`, `watchlist`, `price_events`, `product_events`. Written only
+in Postgres; ClickPipes owns the ClickHouse copies and will overwrite any
+direct write to them. `product_events` is deliberately PII-free.
 
 **Fact table**:
 ClickHouse-only bulk history loaded direct from files (`nadac_weekly`, `sdud_quarterly`, `partd_spending`, `fss_prices`, `mfp_2026`, `orange_book`). Never routed through Postgres.
@@ -59,6 +61,16 @@ ClickHouse-only bulk history loaded direct from files (`nadac_weekly`, `sdud_qua
 
 **Price event**:
 One week-over-week NADAC change for one NDC-11, written to Postgres and carried to ClickHouse by CDC.
+
+**Product event**:
+One immutable user action: signup, drug view, watch add, or watch remove. It is
+written to Postgres and carried to ClickHouse by CDC. Known dimensions are
+typed; never include email, note content, raw search text, IP address, or user
+agent.
+
+**Product analytics**:
+Usage metrics queried from `product_analytics.events`, the PII-free ClickHouse
+projection over the CDC-owned, immutable `product_events` table.
 
 **Watchlist**:
 The NDCs a user tracks, each with a percent-change threshold.

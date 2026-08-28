@@ -51,6 +51,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             >
               Margin map
             </Link>
+            <Link
+              href="/analytics"
+              className="text-sm text-neutral-400 transition-colors hover:text-neutral-100"
+            >
+              Usage
+            </Link>
           </div>
         </header>
         {children}

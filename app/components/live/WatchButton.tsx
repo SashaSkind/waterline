@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+import { getProductAnalyticsSessionId } from "@/lib/product-events-client";
+
 export default function WatchButton({
   ndc11,
   initialWatched,
@@ -15,14 +17,16 @@ export default function WatchButton({
   const toggle = async () => {
     setBusy(true);
     try {
+      const sessionId = getProductAnalyticsSessionId();
       if (watched) {
-        const res = await fetch(`/api/watchlist?ndc11=${ndc11}`, { method: "DELETE" });
+        const params = new URLSearchParams({ ndc11, session_id: sessionId });
+        const res = await fetch(`/api/watchlist?${params}`, { method: "DELETE" });
         if (res.ok) setWatched(false);
       } else {
         const res = await fetch("/api/watchlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ndc11 }),
+          body: JSON.stringify({ ndc11, session_id: sessionId }),
         });
         if (res.ok) setWatched(true);
       }

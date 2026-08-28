@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import SearchBox from "@/components/SearchBox";
+import DrugViewTracker from "@/components/analytics/DrugViewTracker";
 import DrugHeader from "@/components/drug/DrugHeader";
 import HistoryChart from "@/components/drug/HistoryChart";
 import HowToRead from "@/components/drug/HowToRead";
@@ -57,6 +58,7 @@ export default async function DrugPage({ params }: Props) {
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-8">
+      <DrugViewTracker ndc11={ndc11} />
       <div className="mb-8 flex flex-wrap items-center gap-6">
         <Link
           href="/"
