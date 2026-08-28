@@ -1,0 +1,14 @@
+[project]
+name = "waterline-loaders"
+version = "0.1.0"
+description = "Data loaders for Waterline. Run locally, never deployed."
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2",
+    "duckdb>=1.1",
+    "psycopg[binary]>=3.2",
+    "clickhouse-connect>=0.8",
+    "requests>=2.32",
+    "openpyxl>=3.1",
+    "python-dotenv>=1.0",
+]
