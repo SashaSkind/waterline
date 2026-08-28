@@ -6,7 +6,11 @@ import { getWatchlist, normalizeNdc } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json(await getWatchlist());
+  try {
+    return NextResponse.json(await getWatchlist());
+  } catch {
+    return NextResponse.json([], { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

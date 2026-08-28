@@ -54,6 +54,8 @@ def main() -> None:
     ap.add_argument("--weeks", type=int, default=8, help="how many recent weeks to replay")
     ap.add_argument("--interval", type=float, default=5.0, help="seconds per replayed week")
     ap.add_argument("--ndcs", default=None, help="optional file of NDCs to restrict to")
+    ap.add_argument("--reset", action="store_true",
+                    help="clear price_events before replaying (CDC propagates the delete)")
     args = ap.parse_args()
 
     df = fetch_events(args.weeks, args.ndcs)
@@ -62,6 +64,10 @@ def main() -> None:
           f"({args.interval}s per week)")
 
     with pg_conn() as conn:
+        if args.reset:
+            n = conn.execute("DELETE FROM price_events").rowcount
+            conn.commit()
+            print(f"reset: deleted {n} existing price events")
         # dim_drug membership check once, so every event resolves in the app
         known = {
             r[0] for r in conn.execute("SELECT ndc11 FROM dim_drug").fetchall()

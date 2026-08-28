@@ -16,15 +16,15 @@ export default function WatchButton({
     setBusy(true);
     try {
       if (watched) {
-        await fetch(`/api/watchlist?ndc11=${ndc11}`, { method: "DELETE" });
-        setWatched(false);
+        const res = await fetch(`/api/watchlist?ndc11=${ndc11}`, { method: "DELETE" });
+        if (res.ok) setWatched(false);
       } else {
-        await fetch("/api/watchlist", {
+        const res = await fetch("/api/watchlist", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ndc11 }),
         });
-        setWatched(true);
+        if (res.ok) setWatched(true);
       }
     } finally {
       setBusy(false);

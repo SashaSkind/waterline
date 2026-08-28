@@ -490,7 +490,14 @@ export async function getAlerts(limit = 50): Promise<AlertRow[]> {
             if(r.reimb_per_unit - toFloat64(e.nadac_per_unit) < 0
                AND r.reimb_per_unit - toFloat64(e.prev_per_unit) >= 0, 1, 0) AS flipped_negative,
             toString(e.ingested_at) AS ingested_at
-     FROM price_events_v e
+     FROM (
+       -- A re-run of the replay INSERTs the same (ndc11, effective_date)
+       -- change under a fresh event_id; keep only the newest so the feed
+       -- never shows one price change twice.
+       SELECT * FROM price_events_v
+       ORDER BY event_id DESC
+       LIMIT 1 BY ndc11, effective_date
+     ) e
      INNER JOIN watchlist_v w ON w.ndc11 = e.ndc11
         AND abs(toFloat64(e.pct_change)) >= toFloat64(w.threshold_pct)
      INNER JOIN dim_drug_v d ON d.ndc11 = e.ndc11

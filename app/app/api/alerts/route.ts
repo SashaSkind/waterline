@@ -5,5 +5,9 @@ import { getAlerts } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json(await getAlerts());
+  try {
+    return NextResponse.json(await getAlerts());
+  } catch {
+    return NextResponse.json([], { status: 500 });
+  }
 }
