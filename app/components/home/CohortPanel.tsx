@@ -2,7 +2,7 @@ import type { CohortStats } from "@/lib/queries";
 
 const pct = (n: number) => `${n.toFixed(1)}%`;
 const compactMoney = (n: number) =>
-  n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : `$${Math.round(n / 1e6)}M`;
+  n >= 1e9 ? `$${(n / 1e9).toFixed(2)}B` : `$${(n / 1e6).toFixed(1)}M`;
 
 function Tile({
   label,
@@ -40,11 +40,10 @@ export default function CohortPanel({ stats }: { stats: CohortStats | null }) {
           Who&rsquo;s underwater
         </h2>
         <span className="text-sm text-neutral-500">
-          {stats.year} Q{stats.quarter} &middot;{" "}
           <span className="text-neutral-300">
             {compactMoney(stats.dollars_below_acq)}
           </span>{" "}
-          reimbursed below acquisition cost this quarter
+          reimbursed below acquisition cost in {stats.year} Q{stats.quarter}
         </span>
       </div>
       <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -78,6 +77,12 @@ export default function CohortPanel({ stats }: { stats: CohortStats | null }) {
       <p className="mt-2 text-xs text-red-300/90">
         {stats.brand_spend_underwater_pct.toFixed(0)}% of brand-drug Medicaid
         spend flows through drugs reimbursed below what the pharmacy paid.
+      </p>
+      <p className="mt-1 text-[11px] text-neutral-600">
+        Rates cover the {stats.all_ndcs.toLocaleString("en-US")} NDCs with a
+        surveyed NADAC price, usable Medicaid claims, and a current FDA
+        listing; NADAC surveys retail pharmacies only, so clinic-administered
+        drugs are out of scope.
       </p>
     </section>
   );

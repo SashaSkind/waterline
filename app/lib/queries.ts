@@ -530,8 +530,25 @@ export interface CohortStats {
  * quarter's total dollars reimbursed below acquisition cost. */
 export async function getCohortStats(): Promise<CohortStats | null> {
   const rows = await chRows<CohortStats>(
-    `WITH latest AS (
-       SELECT year AS y, quarter AS q FROM margin_mv ORDER BY year DESC, quarter DESC LIMIT 1
+    `WITH qs AS (
+       -- Two most recent quarters with completeness signals. The newest
+       -- quarter is shown only if it matches the prior one's state coverage
+       -- and reaches 95% of its fill volume; a still-filing quarter is
+       -- biased by whichever states/claims arrived first.
+       SELECT year AS y, quarter AS q, uniqExact(state) AS states,
+              toFloat64(sum(rx_count)) AS rx
+       FROM margin_mv GROUP BY year, quarter ORDER BY y DESC, q DESC LIMIT 2
+     ),
+     latest AS (
+       SELECT yq.1 AS y, yq.2 AS q FROM (
+         SELECT if(
+           (SELECT count() FROM qs) = 1
+           OR ((SELECT argMax(states, (y, q)) FROM qs) >= (SELECT argMin(states, (y, q)) FROM qs)
+               AND (SELECT argMax(rx, (y, q)) FROM qs) >= 0.95 * (SELECT argMin(rx, (y, q)) FROM qs)),
+           (SELECT max((y, q)) FROM qs),
+           (SELECT min((y, q)) FROM qs)
+         ) AS yq
+       )
      ),
      nat AS (
        SELECT m.ndc11 AS ndc11,
