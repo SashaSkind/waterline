@@ -1,0 +1,277 @@
+import { chRows } from "./clickhouse";
+
+// ---------- types ----------
+
+export interface DrugRow {
+  ndc11: string;
+  brand_name: string;
+  ingredient: string;
+  strength: string;
+  strength_unit: string;
+  dosage_form: string;
+  route: string;
+  labeler: string;
+  is_generic: boolean;
+  application_number: string;
+}
+
+export interface SearchHit extends DrugRow {
+  has_margin: number; // 1 if the drug appears in margin_mv
+}
+
+export interface Acquisition {
+  nadac_per_unit: number;
+  pricing_unit: string;
+  effective_date: string;
+  classification: string;
+  source: "nadac" | "price_event";
+}
+
+export interface MarginSummary {
+  year: number;
+  quarter: number;
+  acq_per_unit: number;
+  reimb_per_unit: number;
+  margin_per_unit: number;
+  margin_pct: number;
+  units_per_rx: number;
+  margin_per_fill: number;
+  rx_count: number;
+  state_count: number;
+}
+
+export interface PartDBenchmark {
+  brand_name: string;
+  generic_name: string;
+  year: number;
+  avg_spending_per_unit: number;
+}
+
+export interface FssBenchmark {
+  fss_per_unit: number;
+  big_four_price: number | null;
+  package_size: number;
+  vendor: string;
+}
+
+export interface MfpBadge {
+  brand_name: string;
+  generic_name: string;
+  mfp: number;
+  unit_description: string;
+  effective_date: string;
+}
+
+export interface TopTenRow {
+  ndc11: string;
+  brand_name: string;
+  ingredient: string;
+  is_generic: boolean;
+  pricing_unit: string;
+  acq_per_unit: number;
+  reimb_per_unit: number;
+  margin_per_unit: number;
+  margin_pct: number;
+  rx_count: number;
+}
+
+// ---------- helpers ----------
+
+/** 11-digit zero-padded NDC or null. Mirrors loaders/lib.normalize_ndc11. */
+export function normalizeNdc(raw: string): string | null {
+  const digits = raw.replace(/\D/g, "");
+  if (!digits || digits.length > 11) return null;
+  return digits.padStart(11, "0");
+}
+
+const looksLikeNdc = (q: string) => /^[\d\s-]{8,}$/.test(q.trim());
+
+// Name normalization used for the fuzzy Part D / MFP joins: lowercase,
+// strip everything but letters and digits. A miss is "no data", never an error.
+const NORM = (col: string) => `replaceRegexpAll(lower(${col}), '[^a-z0-9]', '')`;
+
+// ---------- F1: search ----------
+
+export async function searchDrugs(q: string): Promise<SearchHit[]> {
+  const trimmed = q.trim();
+  if (!trimmed) return [];
+  if (looksLikeNdc(trimmed)) {
+    const ndc11 = normalizeNdc(trimmed);
+    if (!ndc11) return [];
+    return chRows<SearchHit>(
+      `SELECT d.ndc11, d.brand_name, d.ingredient, d.strength, d.strength_unit,
+              d.dosage_form, d.route, d.labeler, d.is_generic, d.application_number,
+              if(m.ndc11 != '', 1, 0) AS has_margin
+       FROM dim_drug_v d
+       LEFT JOIN (SELECT DISTINCT ndc11 FROM margin_mv) m ON m.ndc11 = d.ndc11
+       WHERE d.ndc11 = {ndc11: String}`,
+      { ndc11 },
+    );
+  }
+  return chRows<SearchHit>(
+    `SELECT d.ndc11, d.brand_name, d.ingredient, d.strength, d.strength_unit,
+            d.dosage_form, d.route, d.labeler, d.is_generic, d.application_number,
+            if(m.total_reimb > 0, 1, 0) AS has_margin
+     FROM dim_drug_v d
+     LEFT JOIN (
+       SELECT ndc11, toFloat64(sum(total_reimb)) AS total_reimb
+       FROM margin_mv GROUP BY ndc11
+     ) m ON m.ndc11 = d.ndc11
+     WHERE positionCaseInsensitive(d.brand_name, {q: String}) > 0
+        OR positionCaseInsensitive(d.ingredient, {q: String}) > 0
+     ORDER BY has_margin DESC, m.total_reimb DESC, d.brand_name, d.ndc11
+     LIMIT 20`,
+    { q: trimmed },
+  );
+}
+
+// ---------- F2: drug page ----------
+
+export async function getDrug(ndc11: string): Promise<DrugRow | null> {
+  const rows = await chRows<DrugRow>(
+    `SELECT ndc11, brand_name, ingredient, strength, strength_unit,
+            dosage_form, route, labeler, is_generic, application_number
+     FROM dim_drug_v WHERE ndc11 = {ndc11: String}`,
+    { ndc11 },
+  );
+  return rows[0] ?? null;
+}
+
+/** Latest acquisition cost: newest of the NADAC file price and any live
+ * price_event that CDC has delivered (the replay path). */
+export async function getAcquisition(ndc11: string): Promise<Acquisition | null> {
+  const rows = await chRows<Acquisition>(
+    `SELECT toFloat64(nadac_per_unit) AS nadac_per_unit, pricing_unit,
+            toString(effective_date) AS effective_date, classification, source
+     FROM (
+       SELECT nadac_per_unit, pricing_unit, effective_date, classification, 'nadac' AS source
+       FROM nadac_weekly FINAL WHERE ndc11 = {ndc11: String}
+       UNION ALL
+       SELECT toDecimal64(nadac_per_unit, 5) AS nadac_per_unit,
+              '' AS pricing_unit, effective_date, '' AS classification, 'price_event' AS source
+       FROM price_events_v WHERE ndc11 = {ndc11: String}
+     )
+     ORDER BY effective_date DESC, source DESC LIMIT 1`,
+    { ndc11 },
+  );
+  const hit = rows[0] ?? null;
+  if (hit && hit.source === "price_event") {
+    // Unit metadata rides on the NADAC row; graft it for display.
+    const meta = await chRows<{ pricing_unit: string; classification: string }>(
+      `SELECT pricing_unit, classification FROM nadac_weekly FINAL
+       WHERE ndc11 = {ndc11: String} ORDER BY effective_date DESC LIMIT 1`,
+      { ndc11 },
+    );
+    if (meta[0]) {
+      hit.pricing_unit = meta[0].pricing_unit;
+      hit.classification = meta[0].classification;
+    }
+  }
+  return hit;
+}
+
+/** National margin for the most recent quarter with data for this NDC. */
+export async function getMarginSummary(ndc11: string): Promise<MarginSummary | null> {
+  const rows = await chRows<MarginSummary>(
+    `SELECT year, quarter,
+            acq_per_unit,
+            sum_reimb / sum_units AS reimb_per_unit,
+            reimb_per_unit - acq_per_unit AS margin_per_unit,
+            margin_per_unit / acq_per_unit * 100 AS margin_pct,
+            sum_units / sum_rx AS units_per_rx,
+            margin_per_unit * units_per_rx AS margin_per_fill,
+            toUInt32(sum_rx) AS rx_count,
+            state_count
+     FROM (
+       SELECT year, quarter,
+              toFloat64(any(acq_per_unit)) AS acq_per_unit,
+              toFloat64(sum(total_reimb)) AS sum_reimb,
+              toFloat64(sum(units)) AS sum_units,
+              toFloat64(sum(rx_count)) AS sum_rx,
+              toUInt32(uniqExact(state)) AS state_count
+       FROM margin_mv WHERE ndc11 = {ndc11: String}
+       GROUP BY year, quarter
+       ORDER BY year DESC, quarter DESC LIMIT 1
+     )`,
+    { ndc11 },
+  );
+  return rows[0] ?? null;
+}
+
+export async function getPartD(ndc11: string): Promise<PartDBenchmark | null> {
+  // No NDC in the CMS data: fuzzy name join, generic name first, then brand.
+  const rows = await chRows<PartDBenchmark>(
+    `WITH (SELECT ${NORM("ingredient")} FROM dim_drug_v WHERE ndc11 = {ndc11: String}) AS ing,
+          (SELECT ${NORM("brand_name")} FROM dim_drug_v WHERE ndc11 = {ndc11: String}) AS brand
+     SELECT brand_name, generic_name, year,
+            toFloat64(avg_spending_per_unit) AS avg_spending_per_unit
+     FROM partd_spending FINAL
+     WHERE manufacturer = 'Overall' AND multi_route_flag = 0
+       AND (${NORM("generic_name")} = ing OR ${NORM("brand_name")} = brand)
+     ORDER BY ${NORM("generic_name")} = ing DESC, year DESC
+     LIMIT 1`,
+    { ndc11 },
+  );
+  return rows[0] ?? null;
+}
+
+export async function getFss(ndc11: string): Promise<FssBenchmark | null> {
+  const rows = await chRows<FssBenchmark>(
+    `SELECT toFloat64(fss_per_unit) AS fss_per_unit,
+            toFloat64OrNull(toString(big_four_price)) AS big_four_price,
+            toFloat64(package_size) AS package_size, vendor
+     FROM fss_prices FINAL WHERE ndc11 = {ndc11: String} LIMIT 1`,
+    { ndc11 },
+  );
+  const hit = rows[0] ?? null;
+  // fss_per_unit = 0 is the loader's "package size unparseable" sentinel.
+  return hit && hit.fss_per_unit > 0 ? hit : null;
+}
+
+export async function getMfp(ndc11: string): Promise<MfpBadge | null> {
+  const rows = await chRows<MfpBadge>(
+    `WITH (SELECT ${NORM("ingredient")} FROM dim_drug_v WHERE ndc11 = {ndc11: String}) AS ing,
+          (SELECT ${NORM("brand_name")} FROM dim_drug_v WHERE ndc11 = {ndc11: String}) AS brand
+     SELECT brand_name, generic_name, toFloat64(mfp) AS mfp,
+            unit_description, toString(effective_date) AS effective_date
+     FROM mfp_2026 FINAL
+     WHERE arrayExists(b -> ${NORM("b")} = brand, splitByString('; ', brand_name))
+        OR position(ing, ${NORM("generic_name")}) > 0
+        OR position(${NORM("generic_name")}, ing) > 0
+     LIMIT 1`,
+    { ndc11 },
+  );
+  return rows[0] ?? null;
+}
+
+// ---------- F3: top ten worst margins ----------
+
+export async function getTopTen(
+  filter: "all" | "brand" | "generic" = "all",
+): Promise<TopTenRow[]> {
+  const filterSql =
+    filter === "brand" ? "AND d.is_generic = false"
+    : filter === "generic" ? "AND d.is_generic = true"
+    : "";
+  return chRows<TopTenRow>(
+    `WITH latest AS (
+       SELECT year, quarter FROM margin_mv ORDER BY year DESC, quarter DESC LIMIT 1
+     )
+     SELECT m.ndc11 AS ndc11, d.brand_name, d.ingredient, d.is_generic,
+            any(m.pricing_unit) AS pricing_unit,
+            toFloat64(any(m.acq_per_unit)) AS acq_per_unit,
+            toFloat64(sum(m.total_reimb) / sum(m.units)) AS reimb_per_unit,
+            reimb_per_unit - acq_per_unit AS margin_per_unit,
+            margin_per_unit / acq_per_unit * 100 AS margin_pct,
+            toUInt32(sum(m.rx_count)) AS rx_count
+     FROM margin_mv m
+     INNER JOIN latest l ON m.year = l.year AND m.quarter = l.quarter
+     INNER JOIN dim_drug_v d ON d.ndc11 = m.ndc11
+     WHERE 1 = 1 ${filterSql}
+     GROUP BY m.ndc11, d.brand_name, d.ingredient, d.is_generic
+     HAVING rx_count >= 100
+     ORDER BY margin_per_unit ASC
+     LIMIT 10`,
+    {},
+  );
+}
