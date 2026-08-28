@@ -1,0 +1,21 @@
+# deps / builds
+node_modules/
+.next/
+.vercel/
+.turbo/
+
+# env & secrets
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+__pycache__/
+*.pyc
+
+# data staging (raw downloads, never committed)
+data/
+
+# misc
+.DS_Store
