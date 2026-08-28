@@ -25,12 +25,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-neutral-950 font-sans">
-        <header className="border-b border-neutral-800/80">
+      <body className="min-h-full flex flex-col bg-ivory font-sans text-wave-950">
+        <header className="border-b border-wave-200/70 bg-ivory/90">
           <div className="mx-auto flex w-full max-w-7xl items-baseline gap-3 px-6 py-4">
             <Link
               href="/"
-              className="flex items-center gap-2.5 self-center text-lg font-semibold tracking-tight text-neutral-50"
+              className="flex items-center gap-2.5 self-center text-lg font-semibold tracking-tight text-wave-950"
             >
               <Image
                 src="/logo.png"
@@ -42,18 +42,18 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               />
               Waterline
             </Link>
-            <span className="hidden text-sm text-neutral-500 sm:inline">
+            <span className="hidden text-sm text-wave-400 sm:inline">
               where drug margins cross zero
             </span>
             <Link
               href="/explore"
-              className="ml-auto text-sm text-neutral-400 transition-colors hover:text-neutral-100"
+              className="ml-auto text-sm text-wave-600 transition-colors hover:text-wave-900"
             >
               Margin map
             </Link>
             <Link
               href="/analytics"
-              className="text-sm text-neutral-400 transition-colors hover:text-neutral-100"
+              className="text-sm text-wave-600 transition-colors hover:text-wave-900"
             >
               Usage
             </Link>

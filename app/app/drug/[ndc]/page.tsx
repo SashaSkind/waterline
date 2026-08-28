@@ -62,7 +62,7 @@ export default async function DrugPage({ params }: Props) {
       <div className="mb-8 flex flex-wrap items-center gap-6">
         <Link
           href="/"
-          className="text-sm font-semibold tracking-tight text-neutral-400 hover:text-neutral-200"
+          className="text-sm font-semibold tracking-tight text-wave-700 hover:text-wave-900"
         >
           Waterline
         </Link>

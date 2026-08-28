@@ -22,5 +22,5 @@ export function shortDate(iso: string): string {
 
 /** Muted placeholder for any missing datum — never zero, never omitted. */
 export function NoData() {
-  return <span className="text-neutral-600">no data</span>;
+  return <span className="text-wave-400">no data</span>;
 }

@@ -13,7 +13,7 @@ export default function FilterTabs({ active }: { active: TopTenFilter }) {
   return (
     <nav
       aria-label="Filter by brand or generic"
-      className="inline-flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-900/60 p-1"
+      className="inline-flex items-center gap-1 rounded-lg border border-wave-200 bg-white/70 p-1"
     >
       {TABS.map((tab) => (
         <Link
@@ -22,8 +22,8 @@ export default function FilterTabs({ active }: { active: TopTenFilter }) {
           aria-current={tab.key === active ? "page" : undefined}
           className={
             tab.key === active
-              ? "rounded-md bg-neutral-700/70 px-3 py-1.5 text-sm font-medium text-neutral-50"
-              : "rounded-md px-3 py-1.5 text-sm text-neutral-400 hover:text-neutral-100"
+              ? "rounded-md bg-wave-100 px-3 py-1.5 text-sm font-medium text-wave-900"
+              : "rounded-md px-3 py-1.5 text-sm text-wave-600 hover:text-wave-950"
           }
         >
           {tab.label}

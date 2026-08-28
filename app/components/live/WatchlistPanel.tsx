@@ -35,27 +35,27 @@ export default function WatchlistPanel() {
 
   return (
     <section className="mt-12">
-      <h2 className="text-lg font-medium text-neutral-200">Your watchlist</h2>
+      <h2 className="text-lg font-medium text-wave-900">Your watchlist</h2>
       <ul className="mt-4 grid gap-2 sm:grid-cols-2">
         {rows.map((w) => (
           <li
             key={w.watch_id}
-            className="rounded-lg border border-neutral-800 bg-neutral-900/40 px-4 py-3"
+            className="rounded-lg border border-wave-200 bg-white/70 px-4 py-3"
           >
             <Link href={`/drug/${w.ndc11}`} className="block">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="truncate font-medium text-neutral-100">
+                <span className="truncate font-medium text-wave-950">
                   {w.brand_name}
                 </span>
                 <span
                   className={`shrink-0 text-sm font-semibold tabular-nums ${
-                    (w.margin_per_unit ?? 0) < 0 ? "text-red-400" : "text-neutral-300"
+                    (w.margin_per_unit ?? 0) < 0 ? "text-red-600" : "text-wave-800"
                   }`}
                 >
                   {w.margin_per_unit === null ? "no data" : `${fmt(w.margin_per_unit)}/unit`}
                 </span>
               </div>
-              <div className="mt-0.5 flex items-baseline justify-between gap-2 text-xs text-neutral-500">
+              <div className="mt-0.5 flex items-baseline justify-between gap-2 text-xs text-wave-500">
                 <span className="truncate">{w.ingredient}</span>
                 <span>alert at ±{w.threshold_pct}%</span>
               </div>

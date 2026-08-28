@@ -199,7 +199,7 @@ export default function MarginMapExplorer({
     if (!ctx) return;
     ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
     ctx.clearRect(0, 0, size.width, size.height);
-    ctx.fillStyle = "#0a0a0a";
+    ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, size.width, size.height);
 
     const plotWidth = size.width - PLOT.left - PLOT.right;
@@ -210,8 +210,8 @@ export default function MarginMapExplorer({
     ctx.clip();
 
     ctx.lineWidth = 1;
-    ctx.strokeStyle = "#262626";
-    ctx.fillStyle = "#737373";
+    ctx.strokeStyle = "#e4e1d8";
+    ctx.fillStyle = "#2d7f96";
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
@@ -235,7 +235,7 @@ export default function MarginMapExplorer({
     if (lineLow < lineHigh) {
       const from = coordinates(lineLow, lineLow);
       const to = coordinates(lineHigh, lineHigh);
-      ctx.strokeStyle = "#f5f5f5";
+      ctx.strokeStyle = "#0e6378";
       ctx.lineWidth = 1.5;
       ctx.setLineDash([6, 5]);
       ctx.beginPath();
@@ -243,7 +243,7 @@ export default function MarginMapExplorer({
       ctx.lineTo(to.x, to.y);
       ctx.stroke();
       ctx.setLineDash([]);
-      ctx.fillStyle = "#d4d4d4";
+      ctx.fillStyle = "#0e6378";
       ctx.font = "10px ui-sans-serif, system-ui, sans-serif";
       ctx.textAlign = "left";
       ctx.fillText("waterline", Math.min(to.x + 6, size.width - 72), Math.max(to.y - 14, 8));
@@ -256,8 +256,11 @@ export default function MarginMapExplorer({
         const { x, y } = coordinates(bin.bx, bin.by);
         const radius = 3 + Math.sqrt(bin.n / maxN) * 16;
         const underwater = bin.n_underwater / Math.max(1, bin.n);
-        const red = Math.round(52 + underwater * 187);
-        const green = Math.round(190 - underwater * 120);
+        // Interpolate wave-700 teal rgb(14, 99, 120) → red-700 rgb(185, 28, 28)
+        // as the underwater share goes 0 → 1.
+        const red = Math.round(14 + underwater * 171);
+        const green = Math.round(99 - underwater * 71);
+        const blue = Math.round(120 - underwater * 92);
         const target: Target = {
           kind: "bin",
           key: `${bin.bx}:${bin.by}`,
@@ -265,10 +268,10 @@ export default function MarginMapExplorer({
         };
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${red}, ${green}, 104, 0.78)`;
+        ctx.fillStyle = `rgba(${red}, ${green}, ${blue}, 0.78)`;
         ctx.fill();
         if (hovered?.target.key === target.key) {
-          ctx.strokeStyle = "#fafafa";
+          ctx.strokeStyle = "#0a4c5c";
           ctx.lineWidth = 2;
           ctx.stroke();
         }
@@ -281,12 +284,12 @@ export default function MarginMapExplorer({
         const target: Target = { kind: "point", key: point.ndc11, value: point };
         ctx.beginPath();
         ctx.arc(x, y, radius, 0, Math.PI * 2);
-        ctx.fillStyle = point.margin_per_unit < 0 ? "#f87171" : "#34d399";
+        ctx.fillStyle = point.margin_per_unit < 0 ? "#dc2626" : "#0e6378";
         ctx.globalAlpha = 0.82;
         ctx.fill();
         ctx.globalAlpha = 1;
         if (hovered?.target.key === target.key) {
-          ctx.strokeStyle = "#fafafa";
+          ctx.strokeStyle = "#0a4c5c";
           ctx.lineWidth = 1.5;
           ctx.stroke();
         }
@@ -296,10 +299,10 @@ export default function MarginMapExplorer({
     hitsRef.current = hits;
     ctx.restore();
 
-    ctx.strokeStyle = "#404040";
+    ctx.strokeStyle = "#b9d4dc";
     ctx.lineWidth = 1;
     ctx.strokeRect(PLOT.left, PLOT.top, plotWidth, plotHeight);
-    ctx.fillStyle = "#737373";
+    ctx.fillStyle = "#2d7f96";
     ctx.font = "11px ui-monospace, SFMono-Regular, Menlo, monospace";
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
@@ -313,7 +316,7 @@ export default function MarginMapExplorer({
       const { y } = coordinates(view.lx0, tick);
       ctx.fillText(logTick(tick), PLOT.left - 9, y);
     }
-    ctx.fillStyle = "#a3a3a3";
+    ctx.fillStyle = "#0a4c5c";
     ctx.font = "12px ui-sans-serif, system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText("Pharmacy acquisition cost per unit · log scale", PLOT.left + plotWidth / 2, size.height - 15);
@@ -415,53 +418,53 @@ export default function MarginMapExplorer({
       const bin = hovered.target.value;
       return (
         <>
-          <p className="font-medium text-neutral-100">
+          <p className="font-medium text-wave-950">
             {bin.n.toLocaleString()} drug{bin.n === 1 ? "" : "s"}
           </p>
-          <p className="mt-1 text-neutral-400">
+          <p className="mt-1 text-wave-600">
             {Math.round((bin.n_underwater / Math.max(1, bin.n)) * 100)}% underwater
           </p>
-          <p className="mt-2 border-t border-neutral-700 pt-2 text-neutral-400">
-            Worst: <span className="text-neutral-200">{bin.worst_name || bin.worst_ndc}</span>
+          <p className="mt-2 border-t border-wave-200 pt-2 text-wave-600">
+            Worst: <span className="text-wave-900">{bin.worst_name || bin.worst_ndc}</span>
           </p>
-          <p className="tabular-nums text-red-400">{money(bin.worst_margin)} per unit</p>
-          <p className="mt-2 text-neutral-600">Click to open the worst drug</p>
+          <p className="tabular-nums text-red-600">{money(bin.worst_margin)} per unit</p>
+          <p className="mt-2 text-wave-400">Click to open the worst drug</p>
         </>
       );
     }
     const point = hovered.target.value;
     return (
       <>
-        <p className="font-medium text-neutral-100">{point.brand_name || point.ndc11}</p>
-        <p className="text-neutral-500">{point.ingredient}</p>
+        <p className="font-medium text-wave-950">{point.brand_name || point.ndc11}</p>
+        <p className="text-wave-500">{point.ingredient}</p>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 tabular-nums">
-          <dt className="text-neutral-500">Acquisition</dt>
-          <dd className="text-right text-neutral-200">{money(point.acq_per_unit)}</dd>
-          <dt className="text-neutral-500">Reimbursement</dt>
-          <dd className="text-right text-neutral-200">{money(point.reimb_per_unit)}</dd>
-          <dt className="text-neutral-500">Margin</dt>
-          <dd className={`text-right ${point.margin_per_unit < 0 ? "text-red-400" : "text-emerald-400"}`}>
+          <dt className="text-wave-500">Acquisition</dt>
+          <dd className="text-right text-wave-900">{money(point.acq_per_unit)}</dd>
+          <dt className="text-wave-500">Reimbursement</dt>
+          <dd className="text-right text-wave-900">{money(point.reimb_per_unit)}</dd>
+          <dt className="text-wave-500">Margin</dt>
+          <dd className={`text-right ${point.margin_per_unit < 0 ? "text-red-600" : "text-emerald-700"}`}>
             {money(point.margin_per_unit)}
           </dd>
         </dl>
-        <p className="mt-2 text-neutral-600">Click to open this drug</p>
+        <p className="mt-2 text-wave-400">Click to open this drug</p>
       </>
     );
   }, [hovered]);
 
   if (!period) {
-    return <p className="text-neutral-500">No margin-map periods are available.</p>;
+    return <p className="text-wave-500">No margin-map periods are available.</p>;
   }
 
   return (
     <div>
-      <div className="grid gap-4 rounded-xl border border-neutral-800 bg-neutral-900/40 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
+      <div className="grid gap-4 rounded-xl border border-wave-200 bg-white/70 p-4 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
           <div className="flex items-center justify-between gap-4">
-            <label htmlFor="quarter" className="text-sm font-medium text-neutral-300">
+            <label htmlFor="quarter" className="text-sm font-medium text-wave-800">
               Quarter
             </label>
-            <span className="font-mono text-sm font-semibold text-neutral-100">
+            <span className="font-mono text-sm font-semibold text-wave-950">
               {period.year} Q{period.quarter}
             </span>
           </div>
@@ -472,20 +475,20 @@ export default function MarginMapExplorer({
             max={Math.max(0, metadata.periods.length - 1)}
             value={periodIndex}
             onChange={(event) => setPeriodIndex(Number(event.target.value))}
-            className="mt-3 w-full accent-sky-400"
+            className="mt-3 w-full accent-wave-600"
           />
-          <div className="mt-1 flex justify-between text-[10px] text-neutral-600">
+          <div className="mt-1 flex justify-between text-[10px] text-wave-400">
             <span>{metadata.periods[0]?.year} Q{metadata.periods[0]?.quarter}</span>
             <span>{metadata.periods.at(-1)?.year} Q{metadata.periods.at(-1)?.quarter}</span>
           </div>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="grid gap-1 text-xs text-neutral-500">
+          <label className="grid gap-1 text-xs text-wave-500">
             State
             <select
               value={state}
               onChange={(event) => setState(event.target.value)}
-              className="h-9 rounded-md border border-neutral-700 bg-neutral-950 px-3 text-sm text-neutral-200 outline-none focus:border-sky-600"
+              className="h-9 rounded-md border border-wave-300 bg-white px-3 text-sm text-wave-900 outline-none focus:border-wave-600"
             >
               <option value="">All states</option>
               {metadata.states.map((option) => (
@@ -496,7 +499,7 @@ export default function MarginMapExplorer({
           <button
             type="button"
             onClick={() => zoomAt(0.65)}
-            className="h-9 rounded-md border border-neutral-700 px-3 text-sm text-neutral-300 hover:border-neutral-500"
+            className="h-9 rounded-md border border-wave-300 px-3 text-sm text-wave-800 hover:border-wave-500"
             aria-label="Zoom in"
           >
             +
@@ -504,7 +507,7 @@ export default function MarginMapExplorer({
           <button
             type="button"
             onClick={() => zoomAt(1.5)}
-            className="h-9 rounded-md border border-neutral-700 px-3 text-sm text-neutral-300 hover:border-neutral-500"
+            className="h-9 rounded-md border border-wave-300 px-3 text-sm text-wave-800 hover:border-wave-500"
             aria-label="Zoom out"
           >
             −
@@ -512,21 +515,21 @@ export default function MarginMapExplorer({
           <button
             type="button"
             onClick={() => setView(metadata.initial_view)}
-            className="h-9 rounded-md border border-neutral-700 px-3 text-xs text-neutral-400 hover:border-neutral-500"
+            className="h-9 rounded-md border border-wave-300 px-3 text-xs text-wave-600 hover:border-wave-500"
           >
             Reset view
           </button>
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-xl border border-neutral-800 bg-neutral-950">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-800 px-4 py-2 text-xs">
-          <div className="flex items-center gap-3 text-neutral-500">
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-400" /> underwater</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-400" /> above water</span>
-            <span className="text-neutral-600">drag to pan · scroll to zoom · click to open</span>
+      <div className="mt-4 overflow-hidden rounded-xl border border-wave-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-wave-200 px-4 py-2 text-xs">
+          <div className="flex items-center gap-3 text-wave-500">
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-600" /> underwater</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-wave-700" /> above water</span>
+            <span className="text-wave-400">drag to pan · scroll to zoom · click to open</span>
           </div>
-          <div className="flex items-center gap-2 font-mono text-neutral-500">
+          <div className="flex items-center gap-2 font-mono text-wave-500">
             {response && (
               <>
                 <span>{response.ndcs.toLocaleString()} NDCs</span>
@@ -534,12 +537,12 @@ export default function MarginMapExplorer({
                 <span>{response.source_rows.toLocaleString()} rows</span>
                 <span>·</span>
                 <span>{response.query_ms} ms</span>
-                <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] uppercase text-neutral-400">
+                <span className="rounded bg-wave-100 px-1.5 py-0.5 text-[10px] uppercase text-wave-600">
                   {response.mode}
                 </span>
               </>
             )}
-            {loading && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-sky-400" />}
+            {loading && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-wave-500" />}
           </div>
         </div>
 
@@ -558,7 +561,7 @@ export default function MarginMapExplorer({
           />
           {tooltip && hovered && (
             <div
-              className="pointer-events-none absolute z-10 min-w-48 max-w-64 rounded-lg border border-neutral-700 bg-neutral-900/95 px-3 py-2 text-xs shadow-xl"
+              className="pointer-events-none absolute z-10 min-w-48 max-w-64 rounded-lg border border-wave-200 bg-white/95 px-3 py-2 text-xs shadow-xl"
               style={{
                 left: Math.min(size.width - 260, Math.max(8, hovered.x + 14)),
                 top: Math.min(size.height - 170, Math.max(8, hovered.y + 14)),
@@ -568,29 +571,29 @@ export default function MarginMapExplorer({
             </div>
           )}
           {error && (
-            <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-md border border-red-900 bg-red-950/90 px-3 py-2 text-xs text-red-300">
+            <div className="absolute left-1/2 top-4 -translate-x-1/2 rounded-md border border-red-300 bg-red-100/95 px-3 py-2 text-xs text-red-700">
               {error}
             </div>
           )}
           {response?.mode === "points" && response.truncated && (
-            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 rounded-md border border-amber-800 bg-amber-950/90 px-3 py-2 text-xs text-amber-300">
+            <div className="absolute bottom-16 left-1/2 -translate-x-1/2 rounded-md border border-amber-300 bg-amber-100/95 px-3 py-2 text-xs text-amber-800">
               More than 1,500 drugs here — zoom in further for every drug.
             </div>
           )}
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 text-xs text-neutral-500 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 text-xs text-wave-500 sm:grid-cols-3">
         <p>
-          <span className="font-medium text-neutral-300">The diagonal is zero margin.</span>{" "}
+          <span className="font-medium text-wave-800">The diagonal is zero margin.</span>{" "}
           Every mark below it is a drug package where Medicaid reimbursement did not cover acquisition.
         </p>
         <p>
-          <span className="font-medium text-neutral-300">Every move is a new ClickHouse query.</span>{" "}
+          <span className="font-medium text-wave-800">Every move is a new ClickHouse query.</span>{" "}
           The server re-aggregates the visible state-drug rows into a bounded set of log-space bins.
         </p>
         <p>
-          <span className="font-medium text-neutral-300">Zoom reveals individual NDCs.</span>{" "}
+          <span className="font-medium text-wave-800">Zoom reveals individual NDCs.</span>{" "}
           Until then, circle size is drug count and color is the share underwater. EA, ML, and GM pricing units are mixed.
         </p>
       </div>

@@ -32,11 +32,11 @@ export default function StateComparison({
     .map((state) => state.state);
 
   return (
-    <section className="mt-10 border-t border-neutral-800 pt-8">
-      <h2 className="text-lg font-medium text-neutral-200">
+    <section className="mt-10 border-t border-wave-200 pt-8">
+      <h2 className="text-lg font-medium text-wave-900">
         Reimbursement by state
       </h2>
-      <p className="mt-1 text-sm text-neutral-500">
+      <p className="mt-1 text-sm text-wave-500">
         {comparison.year} Q{comparison.quarter}, sorted lowest to highest · the
         dashed line is NADAC acquisition at {money(acquisition)} per unit
       </p>
@@ -53,44 +53,44 @@ export default function StateComparison({
             layout="vertical"
             margin={{ top: 4, right: 16, bottom: 8, left: 2 }}
           >
-            <CartesianGrid stroke="#262626" strokeDasharray="3 3" horizontal={false} />
+            <CartesianGrid stroke="#dcd9d0" strokeDasharray="3 3" horizontal={false} />
             <XAxis
               type="number"
               tickFormatter={(value) => money(Number(value))}
-              tick={{ fill: "#737373", fontSize: 11 }}
-              axisLine={{ stroke: "#404040" }}
+              tick={{ fill: "#4b6b75", fontSize: 11 }}
+              axisLine={{ stroke: "#b9d4dc" }}
               tickLine={false}
             />
             <YAxis
               dataKey="state"
               type="category"
               width={34}
-              tick={{ fill: "#a3a3a3", fontSize: 11 }}
+              tick={{ fill: "#0a4c5c", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               interval={0}
             />
             <Tooltip
-              cursor={{ fill: "#262626", opacity: 0.5 }}
+              cursor={{ fill: "#dce9ed", opacity: 0.5 }}
               contentStyle={{
-                background: "#171717",
-                border: "1px solid #404040",
+                background: "#ffffff",
+                border: "1px solid #b9d4dc",
                 borderRadius: 8,
-                color: "#e5e5e5",
+                color: "#062e38",
                 fontSize: 12,
               }}
               formatter={(value) => [money(Number(value)), "Reimbursement"]}
             />
             <ReferenceLine
               x={acquisition}
-              stroke="#38bdf8"
+              stroke="#0e6378"
               strokeDasharray="4 4"
             />
             <Bar dataKey="reimb_per_unit" radius={[0, 3, 3, 0]} isAnimationActive={false}>
               {comparison.states.map((state) => (
                 <Cell
                   key={state.state}
-                  fill={state.margin_per_unit < 0 ? "#ef4444" : "#10b981"}
+                  fill={state.margin_per_unit < 0 ? "#dc2626" : "#2d7f96"}
                   fillOpacity={0.75}
                 />
               ))}
@@ -99,9 +99,9 @@ export default function StateComparison({
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-3 space-y-1 text-xs text-neutral-500">
+      <div className="mt-3 space-y-1 text-xs text-wave-500">
         <p>
-          Red states reimburse below acquisition; green states reimburse above
+          Red states reimburse below acquisition; teal states reimburse above
           it. FFS and managed-care claims are combined and weighted by units.
         </p>
         {fullySuppressed.length > 0 && (

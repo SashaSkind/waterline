@@ -41,8 +41,8 @@ export default function WatchButton({
       disabled={busy}
       className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
         watched
-          ? "border-sky-600 bg-sky-950/60 text-sky-300"
-          : "border-neutral-700 bg-neutral-900 text-neutral-300 hover:border-neutral-500"
+          ? "border-wave-500 bg-wave-50 text-wave-700"
+          : "border-wave-300 bg-white text-wave-800 hover:border-wave-400"
       } disabled:opacity-50`}
     >
       {watched ? "✓ Watching" : "+ Watch this drug"}

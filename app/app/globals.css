@@ -4,3 +4,21 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
+
+/* Waterline brand palette, sampled from the logo:
+   ivory ground #F4F3EE, deep teal #0E6378, white capsule.
+   wave-700 is the logo teal; steps derived from it. */
+@theme {
+  --color-ivory: #f4f3ee;
+  --color-wave-50: #eef4f6;
+  --color-wave-100: #dce9ed;
+  --color-wave-200: #b9d4dc;
+  --color-wave-300: #8ab5c2;
+  --color-wave-400: #5695a8;
+  --color-wave-500: #2d7f96;
+  --color-wave-600: #177087;
+  --color-wave-700: #0e6378;
+  --color-wave-800: #0a4c5c;
+  --color-wave-900: #083d4a;
+  --color-wave-950: #062e38;
+}

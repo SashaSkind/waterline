@@ -95,13 +95,13 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
         aria-expanded={open}
         aria-controls="search-hits"
         aria-autocomplete="list"
-        className="w-full rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-neutral-100 placeholder-neutral-500 focus:border-sky-500 focus:outline-none"
+        className="w-full rounded-lg border border-wave-300 bg-white px-4 py-3 text-wave-950 placeholder-wave-400 focus:border-wave-500 focus:outline-none"
       />
       {open && (
         <ul
           id="search-hits"
           role="listbox"
-          className="absolute left-0 right-0 top-full z-20 mt-2 max-h-96 overflow-y-auto rounded-lg border border-neutral-700 bg-neutral-900 py-1 shadow-xl shadow-black/50"
+          className="absolute left-0 right-0 top-full z-20 mt-2 max-h-96 overflow-y-auto rounded-lg border border-wave-300 bg-white py-1 shadow-xl shadow-wave-900/10"
         >
           {hits.map((hit, i) => (
             <li key={hit.ndc11} role="option" aria-selected={i === active}>
@@ -115,18 +115,18 @@ export default function SearchBox({ autoFocus = false }: { autoFocus?: boolean }
                 }}
                 onMouseEnter={() => setActive(i)}
                 className={`flex w-full items-baseline gap-2 px-4 py-2.5 text-left ${
-                  i === active ? "bg-neutral-800" : ""
+                  i === active ? "bg-wave-50" : ""
                 }`}
               >
-                <span className="truncate font-medium text-neutral-100">
+                <span className="truncate font-medium text-wave-950">
                   {hit.brand_name}
                 </span>
-                <span className="truncate text-sm text-neutral-400">
+                <span className="truncate text-sm text-wave-600">
                   {hit.ingredient}
                   {hit.strength && ` · ${hit.strength} ${hit.strength_unit}`}
                 </span>
                 {hit.has_margin === 0 && (
-                  <span className="ml-auto shrink-0 rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+                  <span className="ml-auto shrink-0 rounded border border-wave-300 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-wave-500">
                     no pricing data
                   </span>
                 )}

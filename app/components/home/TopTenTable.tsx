@@ -22,8 +22,8 @@ function Chip({ isGeneric }: { isGeneric: boolean }) {
     <span
       className={
         isGeneric
-          ? "inline-block rounded-full border border-sky-500/30 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-sky-400"
-          : "inline-block rounded-full border border-amber-500/30 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-amber-400"
+          ? "inline-block rounded-full border border-wave-200 bg-wave-100 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-wave-700"
+          : "inline-block rounded-full border border-amber-200 bg-amber-100/70 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-amber-700"
       }
     >
       {isGeneric ? "generic" : "brand"}
@@ -35,7 +35,7 @@ function Chip({ isGeneric }: { isGeneric: boolean }) {
 export default function TopTenTable({ rows }: { rows: TopTenRow[] }) {
   if (rows.length === 0) {
     return (
-      <p className="px-4 py-10 text-center text-sm text-neutral-500">
+      <p className="px-4 py-10 text-center text-sm text-wave-500">
         No drugs match this filter in the latest quarter.
       </p>
     );
@@ -44,7 +44,7 @@ export default function TopTenTable({ rows }: { rows: TopTenRow[] }) {
     <div className="overflow-x-auto">
       <div className="min-w-[52rem]">
         <div
-          className={`${COLS} border-b border-neutral-800 py-2.5 text-[11px] font-medium uppercase tracking-wider text-neutral-500`}
+          className={`${COLS} border-b border-wave-200 py-2.5 text-[11px] font-medium uppercase tracking-wider text-wave-500`}
         >
           <span>#</span>
           <span>Drug</span>
@@ -61,45 +61,45 @@ export default function TopTenTable({ rows }: { rows: TopTenRow[] }) {
               <li key={row.ndc11}>
                 <Link
                   href={`/drug/${row.ndc11}`}
-                  className={`${COLS} border-b border-neutral-800/60 py-4 transition-colors last:border-b-0 hover:bg-neutral-900`}
+                  className={`${COLS} border-b border-wave-200/60 py-4 transition-colors last:border-b-0 hover:bg-wave-50`}
                 >
-                  <span className="font-mono text-sm text-neutral-600">
+                  <span className="font-mono text-sm text-wave-400">
                     {i + 1}
                   </span>
                   <span className="min-w-0">
-                    <span className="block truncate text-base font-medium text-neutral-100">
+                    <span className="block truncate text-base font-medium text-wave-950">
                       {row.brand_name}
                     </span>
-                    <span className="block truncate text-sm text-neutral-500">
+                    <span className="block truncate text-sm text-wave-500">
                       {row.ingredient}
                     </span>
                   </span>
                   <span>
                     <Chip isGeneric={row.is_generic} />
                   </span>
-                  <span className="text-right text-[15px] tabular-nums text-neutral-300">
+                  <span className="text-right text-[15px] tabular-nums text-wave-800">
                     {usd(row.acq_per_unit)}
                   </span>
-                  <span className="text-right text-[15px] tabular-nums text-neutral-300">
+                  <span className="text-right text-[15px] tabular-nums text-wave-800">
                     {usd(row.reimb_per_unit)}
                   </span>
                   <span className="text-right">
                     <span
                       className={`block text-2xl font-semibold tabular-nums ${
-                        underwater ? "text-red-400" : "text-neutral-50"
+                        underwater ? "text-red-600" : "text-wave-950"
                       }`}
                     >
                       {usd(row.margin_per_unit)}
                     </span>
                     <span
                       className={`block text-xs tabular-nums ${
-                        underwater ? "text-red-400/70" : "text-neutral-500"
+                        underwater ? "text-red-600/70" : "text-wave-500"
                       }`}
                     >
                       {pct(row.margin_pct)} per {row.pricing_unit}
                     </span>
                   </span>
-                  <span className="text-right text-[15px] tabular-nums text-neutral-300">
+                  <span className="text-right text-[15px] tabular-nums text-wave-800">
                     {intFmt.format(row.rx_count)}
                   </span>
                 </Link>

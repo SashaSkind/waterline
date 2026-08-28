@@ -17,13 +17,13 @@ function Tile({
 }) {
   return (
     <div
-      className={`rounded-lg border bg-neutral-900/40 px-4 py-3 ${
-        accent ? "border-red-900/70" : "border-neutral-800"
+      className={`rounded-lg border bg-white/70 px-4 py-3 ${
+        accent ? "border-red-300" : "border-wave-200"
       }`}
     >
-      <div className="text-xs text-neutral-500">{label}</div>
-      <div className="mt-1 text-2xl font-semibold text-neutral-50">{value}</div>
-      <div className="mt-0.5 text-[11px] text-neutral-600">{sub}</div>
+      <div className="text-xs text-wave-500">{label}</div>
+      <div className="mt-1 text-2xl font-semibold text-wave-950">{value}</div>
+      <div className="mt-0.5 text-[11px] text-wave-400">{sub}</div>
     </div>
   );
 }
@@ -36,11 +36,11 @@ export default function CohortPanel({ stats }: { stats: CohortStats | null }) {
   return (
     <section className="mt-10">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-medium text-neutral-200">
+        <h2 className="text-lg font-medium text-wave-900">
           Who&rsquo;s underwater
         </h2>
-        <span className="text-sm text-neutral-500">
-          <span className="text-neutral-300">
+        <span className="text-sm text-wave-500">
+          <span className="text-wave-800">
             {compactMoney(stats.dollars_below_acq)}
           </span>{" "}
           reimbursed below acquisition cost in {stats.year} Q{stats.quarter}
@@ -74,11 +74,11 @@ export default function CohortPanel({ stats }: { stats: CohortStats | null }) {
           sub={`${n(stats.all_ndcs)} NDCs with data`}
         />
       </div>
-      <p className="mt-2 text-xs text-red-300/90">
+      <p className="mt-2 text-xs text-red-700">
         {stats.brand_spend_underwater_pct.toFixed(0)}% of brand-drug Medicaid
         spend flows through drugs reimbursed below what the pharmacy paid.
       </p>
-      <p className="mt-1 text-[11px] text-neutral-600">
+      <p className="mt-1 text-[11px] text-wave-400">
         Rates cover the {stats.all_ndcs.toLocaleString("en-US")} NDCs with a
         surveyed NADAC price, usable Medicaid claims, and a current FDA
         listing; NADAC surveys retail pharmacies only, so clinic-administered

@@ -21,11 +21,11 @@ function Row({
     <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-5">
       <div className="min-w-48">
         <p
-          className={`font-medium ${primary ? "text-neutral-200" : "text-neutral-400"}`}
+          className={`font-medium ${primary ? "text-wave-900" : "text-wave-600"}`}
         >
           {label}
         </p>
-        <p className="text-xs text-neutral-600">{sub}</p>
+        <p className="text-xs text-wave-400">{sub}</p>
       </div>
       <div className="text-right">{children}</div>
     </div>
@@ -45,21 +45,21 @@ export default function PriceStack({
 }) {
   const unit = acquisition?.pricing_unit || "unit";
   return (
-    <section className="divide-y divide-neutral-800 border-y border-neutral-800">
+    <section className="divide-y divide-wave-200 border-y border-wave-200">
       <Row label="Acquisition · NADAC" sub="pharmacy pays the wholesaler" primary>
         {acquisition ? (
           <>
-            <p className="text-3xl font-semibold tabular-nums text-neutral-100">
+            <p className="text-3xl font-semibold tabular-nums text-wave-950">
               {money(acquisition.nadac_per_unit)}
-              <span className="ml-2 text-base font-normal text-neutral-500">
+              <span className="ml-2 text-base font-normal text-wave-500">
                 per {unit}
               </span>
             </p>
-            <p className="mt-0.5 text-xs text-neutral-500">
+            <p className="mt-0.5 text-xs text-wave-500">
               effective {shortDate(acquisition.effective_date)}
               {acquisition.source === "price_event" && (
-                <span className="ml-2 inline-flex items-center gap-1 text-emerald-400">
-                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />
+                <span className="ml-2 inline-flex items-center gap-1 text-emerald-700">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                   live
                 </span>
               )}
@@ -79,13 +79,13 @@ export default function PriceStack({
       >
         {margin ? (
           <>
-            <p className="text-3xl font-semibold tabular-nums text-neutral-100">
+            <p className="text-3xl font-semibold tabular-nums text-wave-950">
               {money(margin.reimb_per_unit)}
-              <span className="ml-2 text-base font-normal text-neutral-500">
+              <span className="ml-2 text-base font-normal text-wave-500">
                 per {unit}
               </span>
             </p>
-            <p className="mt-0.5 text-xs text-neutral-500">
+            <p className="mt-0.5 text-xs text-wave-500">
               {margin.year} Q{margin.quarter}, all states, pre-rebate
             </p>
           </>
@@ -99,13 +99,13 @@ export default function PriceStack({
       <Row label="Part D benchmark" sub="Medicare average spending">
         {partd ? (
           <>
-            <p className="text-2xl font-semibold tabular-nums text-neutral-300">
+            <p className="text-2xl font-semibold tabular-nums text-wave-800">
               {money(partd.avg_spending_per_unit)}
-              <span className="ml-2 text-sm font-normal text-neutral-500">
+              <span className="ml-2 text-sm font-normal text-wave-500">
                 {partd.year}
               </span>
             </p>
-            <p className="mt-0.5 max-w-xs text-xs text-neutral-500">
+            <p className="mt-0.5 max-w-xs text-xs text-wave-500">
               per dosage unit — CMS collapses strengths, not comparable to NADAC
               unit
             </p>
@@ -120,18 +120,18 @@ export default function PriceStack({
       <Row label="VA FSS" sub="what the VA negotiated">
         {fss ? (
           <>
-            <p className="text-2xl font-semibold tabular-nums text-neutral-300">
+            <p className="text-2xl font-semibold tabular-nums text-wave-800">
               {money(fss.fss_per_unit)}
-              <span className="ml-2 text-sm font-normal text-neutral-500">
+              <span className="ml-2 text-sm font-normal text-wave-500">
                 per unit
               </span>
             </p>
             {fss.big_four_price !== null && fss.package_size > 0 ? (
-              <p className="mt-0.5 text-xs tabular-nums text-neutral-500">
+              <p className="mt-0.5 text-xs tabular-nums text-wave-500">
                 Big Four {money(fss.big_four_price / fss.package_size)} per unit
               </p>
             ) : (
-              <p className="mt-0.5 text-xs text-neutral-500">
+              <p className="mt-0.5 text-xs text-wave-500">
                 Big Four <NoData />
               </p>
             )}

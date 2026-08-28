@@ -21,7 +21,7 @@ export default async function SearchPage({
       <div className="mb-8 flex flex-col gap-6">
         <Link
           href="/"
-          className="text-sm font-semibold tracking-tight text-neutral-400 hover:text-neutral-200"
+          className="text-sm font-semibold tracking-tight text-wave-700 hover:text-wave-900"
         >
           Waterline
         </Link>
@@ -29,43 +29,43 @@ export default async function SearchPage({
       </div>
 
       {q === "" ? (
-        <p className="text-neutral-500">
+        <p className="text-wave-500">
           Search by brand name, generic name, or NDC.
         </p>
       ) : hits.length === 0 ? (
-        <p className="text-neutral-500">
-          No drugs match <span className="text-neutral-300">&ldquo;{q}&rdquo;</span>.
+        <p className="text-wave-500">
+          No drugs match <span className="text-wave-800">&ldquo;{q}&rdquo;</span>.
         </p>
       ) : (
         <>
-          <p className="mb-3 text-sm text-neutral-500">
+          <p className="mb-3 text-sm text-wave-500">
             {hits.length} match{hits.length === 1 ? "" : "es"} for{" "}
-            <span className="text-neutral-300">&ldquo;{q}&rdquo;</span>
+            <span className="text-wave-800">&ldquo;{q}&rdquo;</span>
           </p>
-          <ul className="divide-y divide-neutral-800 rounded-lg border border-neutral-800">
+          <ul className="divide-y divide-wave-200 rounded-lg border border-wave-200 bg-white/70">
             {hits.map((hit) => (
               <li key={hit.ndc11}>
                 <Link
                   href={`/drug/${hit.ndc11}`}
-                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3 hover:bg-neutral-900"
+                  className="flex flex-wrap items-baseline gap-x-3 gap-y-1 px-4 py-3 hover:bg-wave-50"
                 >
-                  <span className="font-medium text-neutral-100">
+                  <span className="font-medium text-wave-950">
                     {hit.brand_name}
                   </span>
-                  <span className="text-sm text-neutral-400">
+                  <span className="text-sm text-wave-600">
                     {hit.ingredient}
                     {hit.strength && ` · ${hit.strength} ${hit.strength_unit}`}
                     {hit.dosage_form && ` · ${hit.dosage_form.toLowerCase()}`}
                   </span>
-                  <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+                  <span className="rounded border border-wave-300 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-wave-500">
                     {hit.is_generic ? "generic" : "brand"}
                   </span>
                   {hit.has_margin === 0 && (
-                    <span className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-500">
+                    <span className="rounded border border-wave-300 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-wave-500">
                       no pricing data
                     </span>
                   )}
-                  <span className="ml-auto font-mono text-xs text-neutral-600">
+                  <span className="ml-auto font-mono text-xs text-wave-400">
                     {hit.ndc11}
                   </span>
                 </Link>

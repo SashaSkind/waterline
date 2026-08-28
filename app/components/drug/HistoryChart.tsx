@@ -82,9 +82,9 @@ export default function HistoryChart({
   const data = mergeHistory(history);
   if (data.length < 2) {
     return (
-      <section className="mt-10 border-t border-neutral-800 pt-8">
-        <h2 className="text-lg font-medium text-neutral-200">Price history</h2>
-        <p className="mt-3 text-sm text-neutral-500">
+      <section className="mt-10 border-t border-wave-200 pt-8">
+        <h2 className="text-lg font-medium text-wave-900">Price history</h2>
+        <p className="mt-3 text-sm text-wave-500">
           Not enough historical acquisition data to draw a trend.
         </p>
       </section>
@@ -102,20 +102,20 @@ export default function HistoryChart({
     mfpDate !== null && timestamp(mfpDate) >= first && timestamp(mfpDate) <= last;
 
   return (
-    <section className="mt-10 border-t border-neutral-800 pt-8">
+    <section className="mt-10 border-t border-wave-200 pt-8">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-medium text-neutral-200">Price history</h2>
-          <p className="mt-1 text-sm text-neutral-500">
+          <h2 className="text-lg font-medium text-wave-900">Price history</h2>
+          <p className="mt-1 text-sm text-wave-500">
             Acquisition cost versus national Medicaid reimbursement per unit
           </p>
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-500">
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-wave-500">
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-0.5 w-4 bg-sky-400" /> NADAC acquisition
+            <span className="h-0.5 w-4 bg-wave-700" /> NADAC acquisition
           </span>
           <span className="inline-flex items-center gap-1.5">
-            <span className="h-0.5 w-4 bg-neutral-200" /> Medicaid reimbursement
+            <span className="h-0.5 w-4 bg-amber-700" /> Medicaid reimbursement
           </span>
         </div>
       </div>
@@ -127,33 +127,33 @@ export default function HistoryChart({
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 22, right: 12, bottom: 4, left: 4 }}>
-            <CartesianGrid stroke="#262626" strokeDasharray="3 3" vertical={false} />
+            <CartesianGrid stroke="#dcd9d0" strokeDasharray="3 3" vertical={false} />
             <XAxis
               dataKey="timestamp"
               type="number"
               scale="time"
               domain={["dataMin", "dataMax"]}
               tickFormatter={(value) => tickDate.format(new Date(Number(value)))}
-              tick={{ fill: "#737373", fontSize: 11 }}
-              axisLine={{ stroke: "#404040" }}
+              tick={{ fill: "#4b6b75", fontSize: 11 }}
+              axisLine={{ stroke: "#b9d4dc" }}
               tickLine={false}
               minTickGap={36}
             />
             <YAxis
               tickFormatter={(value) => money(Number(value))}
-              tick={{ fill: "#737373", fontSize: 11 }}
+              tick={{ fill: "#4b6b75", fontSize: 11 }}
               axisLine={false}
               tickLine={false}
               width={72}
               domain={["auto", "auto"]}
             />
             <Tooltip
-              cursor={{ stroke: "#525252", strokeDasharray: "3 3" }}
+              cursor={{ stroke: "#8ab5c2", strokeDasharray: "3 3" }}
               contentStyle={{
-                background: "#171717",
-                border: "1px solid #404040",
+                background: "#ffffff",
+                border: "1px solid #b9d4dc",
                 borderRadius: 8,
-                color: "#e5e5e5",
+                color: "#062e38",
                 fontSize: 12,
               }}
               labelFormatter={(value) =>
@@ -165,8 +165,8 @@ export default function HistoryChart({
               dataKey="positive_band"
               type="stepAfter"
               stroke="none"
-              fill="#10b981"
-              fillOpacity={0.12}
+              fill="#0e6378"
+              fillOpacity={0.1}
               connectNulls
               tooltipType="none"
               isAnimationActive={false}
@@ -175,8 +175,8 @@ export default function HistoryChart({
               dataKey="underwater_band"
               type="stepAfter"
               stroke="none"
-              fill="#ef4444"
-              fillOpacity={0.16}
+              fill="#dc2626"
+              fillOpacity={0.12}
               connectNulls
               tooltipType="none"
               isAnimationActive={false}
@@ -185,7 +185,7 @@ export default function HistoryChart({
               dataKey="acquisition"
               name="NADAC acquisition"
               type="stepAfter"
-              stroke="#38bdf8"
+              stroke="#0e6378"
               strokeWidth={2}
               dot={false}
               connectNulls
@@ -195,36 +195,36 @@ export default function HistoryChart({
               dataKey="reimbursement"
               name="Medicaid reimbursement"
               type="stepAfter"
-              stroke="#e5e5e5"
+              stroke="#b45309"
               strokeWidth={2}
-              dot={{ r: 2, fill: "#e5e5e5" }}
+              dot={{ r: 2, fill: "#b45309" }}
               connectNulls
               isAnimationActive={false}
             />
             {genericInRange && (
               <ReferenceLine
                 x={timestamp(genericDate)}
-                stroke="#a78bfa"
+                stroke="#7c3aed"
                 strokeDasharray="4 4"
-                label={{ value: "first generic", fill: "#a78bfa", fontSize: 10, position: "insideTopLeft" }}
+                label={{ value: "first generic", fill: "#7c3aed", fontSize: 10, position: "insideTopLeft" }}
               />
             )}
             {mfpInRange && (
               <ReferenceLine
                 x={timestamp(mfpDate)}
-                stroke="#fbbf24"
+                stroke="#92400e"
                 strokeDasharray="4 4"
-                label={{ value: "2026 MFP", fill: "#fbbf24", fontSize: 10, position: "insideTopRight" }}
+                label={{ value: "2026 MFP", fill: "#92400e", fontSize: 10, position: "insideTopRight" }}
               />
             )}
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      <div className="mt-3 space-y-1 text-xs text-neutral-500">
+      <div className="mt-3 space-y-1 text-xs text-wave-500">
         <p>
-          <span className="text-red-400">Red shading</span> marks quarters
-          where reimbursement is below acquisition; green is above water.
+          <span className="text-red-600">Red shading</span> marks quarters
+          where reimbursement is below acquisition; teal is above water.
         </p>
         {genericDate && !genericInRange && (
           <p>
