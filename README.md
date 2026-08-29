@@ -1,9 +1,9 @@
 # Waterline
 
-Waterline shows when Medicaid reimbursement does not cover what a pharmacy
-paid to acquire a drug. It joins public federal pricing data at the package
-level, computes gross pharmacy margin, and makes the result searchable,
-watchable, and explorable over time.
+Waterline shows when reported pharmacy reimbursement does not cover the NADAC
+acquisition-cost benchmark for a drug. It joins public federal pricing data at
+the NDC-11 package level, computes a gross pre-rebate margin proxy, and makes
+the result searchable, watchable, and explorable over time.
 
 The primary user is an independent pharmacist deciding whether a drug is safe
 to stock. A negative margin is **underwater**; zero margin is the **waterline**.
@@ -11,8 +11,8 @@ to stock. A negative margin is **underwater**; zero margin is the **waterline**.
 ## What it does
 
 - Searches by brand, ingredient, or canonical NDC-11.
-- Shows acquisition cost, Medicaid reimbursement, gross margin, and public
-  Medicare/VA price benchmarks for each drug package.
+- Shows NADAC acquisition cost, reported reimbursement, gross margin, and
+  public Medicare/VA price benchmarks for each drug package.
 - Ranks the worst current margins and filters brand versus generic products.
 - Charts weekly NADAC acquisition cost against quarterly Medicaid
   reimbursement, including generic-entry and Medicare negotiated-price events.
@@ -23,19 +23,25 @@ to stock. A negative margin is **underwater**; zero margin is the **waterline**.
   aggregates it live on a product-analytics page in ClickHouse.
 - Replays historical NADAC changes to demonstrate the live CDC path.
 - Renders an interactive, log-scale margin map with server-side ClickHouse
-  binning, pan/zoom reaggregation, quarter playback, and state filtering.
+  binning, pan/zoom reaggregation, a quarter slider, and state filtering.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-    UI[Next.js app] -->|operational writes| PG[Postgres]
-    UI -->|PII-free usage events| PG
-    PG -->|ClickPipes CDC| CH[ClickHouse]
+    B[Browser] -->|HTTP| UI[Next.js app and API]
+    UI -->|operational reads and writes| PG[Managed Postgres]
+    PG -->|waterline-cdc| CP[ClickPipes CDC]
     FED[Federal data files] --> PY[Python loaders]
-    PY -->|bulk history| CH
-    UI -->|analytical reads| CH
-    UI -->|watchlist reads and writes| PG
+    subgraph CH[ClickHouse Cloud: waterline]
+      D[default: CDC copies, federal facts, margin tables]
+      PA[product_analytics: PII-free usage view]
+    end
+    CP -->|continuous replication| D
+    PY -->|bulk history| D
+    D -->|product event projection| PA
+    UI -->|analytical reads| D
+    UI -->|usage metrics| PA
 ```
 
 Postgres owns operational data: users, notes, the drug dimension, watchlists,
@@ -44,7 +50,9 @@ price events, and the append-only product event log. ClickPipes replicates
 ClickHouse. The product log stores user IDs and typed actions but never emails,
 note bodies, search text, IP addresses, or user agents. Immutable federal
 history loads directly into ClickHouse so millions of rows do not pass through
-the Postgres WAL.
+the Postgres WAL. `default` and `product_analytics` are logical databases in
+the same `waterline` ClickHouse Cloud service; product analytics does not use a
+second ClickHouse instance.
 
 New user inserts create their signup event through a Postgres trigger.
 Watchlist mutations create their product event inside the same application
@@ -60,26 +68,88 @@ The main analytical paths are:
 - `product_analytics.events`, a PII-free projection over the append-only
   Postgres activity log.
 
-Every CDC-owned ClickHouse table is read through its deduplicated `*_v` view.
-The application never writes directly to those replicated tables.
+Mutable CDC tables are read through the latest-row views `dim_drug_v`,
+`watchlist_v`, and `price_events_v`. Immutable product events are read through
+the PII-free `product_analytics.events` projection. The application never
+writes directly to ClickPipe-owned ClickHouse tables.
 
 ## Margin definition
 
 For each state, NDC-11, year, and quarter:
 
 ```text
-reimbursement per unit = total Medicaid reimbursement / units reimbursed
-gross margin per unit  = reimbursement per unit - NADAC acquisition cost
+reported reimbursement per unit = SDUD total_amount_reimbursed / units_reimbursed
+gross margin per unit            = reimbursement per unit - NADAC per unit
 ```
 
 The acquisition value is the NADAC price in effect at the quarter midpoint.
-Suppressed and zero-unit Medicaid rows are excluded. The calculation is only
-valid when the NADAC pricing unit agrees with the utilization basis (EA, ML,
-or GM).
+NADAC is a public acquisition-cost benchmark, not the exact invoice price paid
+by every pharmacy. Suppressed and zero-unit SDUD rows are excluded.
 
-Medicaid amounts are pre-rebate and include the dispensing fee, so Waterline
-shows gross—not net—margin. Medicare Part D, VA FSS, and Medicare maximum fair
-prices are context benchmarks and are not used in the margin calculation.
+SDUD `total_amount_reimbursed` includes Medicaid and non-Medicaid amounts,
+includes dispensing fees, and is not reduced by manufacturer rebates. The
+result is therefore a gross pre-rebate margin proxy, not accounting profit.
+The calculation is only comparable within a pricing unit: `EA` is one billable
+item (often a tablet or capsule), `ML` is one milliliter, and `GM` is one gram.
+The overview map displays all three unit types together. Medicare Part D, VA
+FSS, and Medicare maximum fair prices are context benchmarks and are never
+used in the margin calculation.
+
+## Where each dataset appears
+
+- `nadac_weekly` supplies current acquisition cost and the weekly acquisition
+  line on drug pages. It also feeds every derived margin table.
+- `sdud_quarterly` supplies reimbursement, prescriptions, units, and state
+  comparisons. Through `margin_mv` and `margin_map`, it drives the homepage
+  rankings, drug margins, history chart, state chart, and Explore map.
+- `partd_spending` appears on a matching drug page as the **Part D benchmark**.
+  CMS Part D has no NDC key, so this is a normalized ingredient/brand match.
+- `fss_prices` appears on a matching drug page as **VA FSS**, with an optional
+  Big Four price. This uses an exact NDC-11 match.
+- `mfp_2026` appears for a matching negotiated drug as an MFP badge and a 2026
+  marker on its price-history chart.
+- `orange_book` supplies the first-generic-approval marker on a matching drug's
+  history chart.
+
+Part D, FSS, MFP, and Orange Book values enrich individual drug pages; they do
+not currently have standalone explorer pages.
+
+## Interactive margin map
+
+`/explore` is a Canvas 2D scatter plot with acquisition cost on X and reported
+reimbursement on Y, both in log space. The diagonal is zero gross margin:
+points below it are underwater.
+
+Opening the page reads periods, states, counts, and robust initial bounds from
+`margin_map_meta`. Panning, zooming, changing quarter or state, and resizing
+the plot changes the viewport. After a 120 ms debounce, the browser calls
+`/api/margin-map` with the visible log-price bounds. The API runs a fresh,
+parameterized ClickHouse query against `margin_map` and returns a bounded
+payload while the previous response remains painted.
+
+- While zoomed out, ClickHouse groups visible NDCs into log-space bins. Circle
+  size is NDC count, color is the underwater share, and clicking opens the
+  worst-margin drug in the bin.
+- At a viewport span of 0.4 decades or less on both axes (about a 2.5x range),
+  the API switches to individual NDC points. Point results are capped at 1,501;
+  the UI asks the user to zoom further if more are visible.
+
+The status strip reports visible NDCs, underlying state-drug rows, measured
+request time, and whether the response contains bins or points.
+
+## Product analytics
+
+The app records four PII-free event types in Postgres: `user_signed_up`,
+`drug_viewed`, `watch_added`, and `watch_removed`. Signup events are created by
+a Postgres trigger; watch events commit in the same transaction as the
+watchlist mutation; drug views are best-effort browser telemetry.
+
+The existing `waterline-cdc` ClickPipe copies the append-only log to
+`default.product_events`. `product_analytics.events` exposes a typed, PII-free
+projection inside the same ClickHouse service. `/api/product-analytics` returns
+registered and active users, drug views, watch adds/removes, conversion, top
+drugs, and daily activity. `/analytics` currently presents the core user,
+view, watch-add, top-drug, and recent-day metrics.
 
 ## Stack
 
@@ -96,7 +166,7 @@ prices are context benchmarks and are not used in the margin calculation.
 app/                 Next.js application and API routes
 clickhouse/databases/ Logical ClickHouse database DDL
 clickhouse/tables/   ClickHouse fact-table DDL
-clickhouse/views/    Current-row views over ClickPipes CDC tables
+clickhouse/views/    CDC current-row and product-analytics views
 loaders/             Local Python ingestion, rebuild, validation, and replay tools
 postgres/schema.sql  Postgres operational schema
 CONTEXT.md           Canonical domain language and ownership rules
@@ -173,14 +243,14 @@ ClickPipe to replicate `dim_drug`, `watchlist`, `price_events`, and
 `product_events`. For `product_events`, use a `MergeTree` with the custom
 sorting key `(event_name, event_date, ndc11, user_id, event_id)`.
 
-After the replicated tables exist, apply these in order:
+After ClickPipes has created the replicated tables:
 
 ```bash
+# Apply the three statements in clickhouse/views/cdc_current.sql through the
+# ClickHouse SQL console or run them separately through the query endpoint.
+
 clickhousectl cloud service query --name waterline \
   --queries-file clickhouse/databases/product_analytics.sql
-
-# cdc_current.sql contains three view statements; apply it in the SQL console
-# or run each statement separately through the query endpoint.
 
 clickhousectl cloud service query --name waterline \
   --queries-file clickhouse/views/product_analytics.sql
